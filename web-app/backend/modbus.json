@@ -1,0 +1,402 @@
+{
+  "devices": [
+    {
+      "id": "device-1759498339406",
+      "name": "PV",
+      "ipAddress": "192.168.6.228",
+      "port": 1025,
+      "parameters": [
+        {
+          "id": "param-1759498339406",
+          "name": "POWER",
+          "registerType": "holding",
+          "address": 1,
+          "modbusId": 1,
+          "dataType": "float32",
+          "scaleFactor": 1,
+          "offset": 0,
+          "decimalPlaces": 0,
+          "unit": "W",
+          "description": "REQUIRED: Power of the PV in Watts",
+          "wordOrder": "big"
+        },
+        {
+          "id": "param-1759735812796",
+          "name": "VOLTAGE_PV_SIDE",
+          "registerType": "holding",
+          "address": 9,
+          "modbusId": 1,
+          "dataType": "float32",
+          "scaleFactor": 1,
+          "offset": 0,
+          "decimalPlaces": 0,
+          "unit": "V",
+          "description": "OPTIONAL: Voltage on the PV side of the converter",
+          "wordOrder": "big"
+        },
+        {
+          "id": "param-1759735831900",
+          "name": "CURRENT_PV_SIDE",
+          "registerType": "holding",
+          "address": 11,
+          "modbusId": 1,
+          "dataType": "float32",
+          "scaleFactor": 1,
+          "offset": 0,
+          "decimalPlaces": 0,
+          "unit": "A",
+          "description": "OPTIONAL: Current flowing on the PV side of the converter",
+          "wordOrder": "big"
+        },
+        {
+          "id": "param-1759735832036",
+          "name": "VOLTAGE_BUS_SIDE",
+          "registerType": "holding",
+          "address": 13,
+          "modbusId": 1,
+          "dataType": "float32",
+          "scaleFactor": 1,
+          "offset": 0,
+          "decimalPlaces": 0,
+          "unit": "V",
+          "description": "OPTIONAL: Voltage on the DC bus side of the converter",
+          "wordOrder": "big"
+        },
+        {
+          "id": "param-1759735832163",
+          "name": "CURRENT_BUS_SIDE",
+          "registerType": "holding",
+          "address": 15,
+          "modbusId": 1,
+          "dataType": "float32",
+          "scaleFactor": 1,
+          "offset": 0,
+          "decimalPlaces": 0,
+          "unit": "A",
+          "description": "OPTIONAL: Current on the DC bus side of the converter",
+          "wordOrder": "big"
+        },
+        {
+          "id": "param-1759735832294",
+          "name": "DAILY_ENERGY",
+          "registerType": "holding",
+          "address": 17,
+          "modbusId": 1,
+          "dataType": "float32",
+          "scaleFactor": 1,
+          "offset": 0,
+          "decimalPlaces": 0,
+          "unit": "Wh",
+          "description": "OPTIONAL: Daily energy generated via PV in Watt-Hours.",
+          "wordOrder": "big"
+        },
+        {
+          "id": "param-1759735832423",
+          "name": "SYS_EFF",
+          "registerType": "holding",
+          "address": 19,
+          "modbusId": 1,
+          "dataType": "float32",
+          "scaleFactor": 1,
+          "offset": 0,
+          "decimalPlaces": 0,
+          "unit": "%",
+          "description": "OPTIONAL: PV system efficiency in percent.",
+          "wordOrder": "big"
+        },
+        {
+          "id": "param-1759735832551",
+          "name": "PCS_TEMP",
+          "registerType": "holding",
+          "address": 21,
+          "modbusId": 1,
+          "dataType": "float32",
+          "scaleFactor": 1,
+          "offset": 0,
+          "decimalPlaces": 0,
+          "unit": "Celsius",
+          "description": "OPTIONAL: Temperature of the converter",
+          "wordOrder": "big"
+        },
+        {
+          "id": "param-1759735907198",
+          "name": "OPER_MODE",
+          "registerType": "holding",
+          "address": 23,
+          "modbusId": 1,
+          "dataType": "float32",
+          "scaleFactor": 1,
+          "offset": 0,
+          "decimalPlaces": 0,
+          "unit": "-",
+          "description": "OPTIONAL: Current operational mode of the converter",
+          "wordOrder": "big"
+        }
+      ]
+    },
+    {
+      "id": "device-1761728997575",
+      "name": "BESS",
+      "ipAddress": "192.168.6.228",
+      "port": 1025,
+      "parameters": [
+        {
+          "id": "param-1761728997575",
+          "name": "POWER",
+          "registerType": "holding",
+          "address": 3,
+          "modbusId": 1,
+          "dataType": "float32",
+          "scaleFactor": 1000,
+          "offset": 0,
+          "decimalPlaces": 0,
+          "unit": "W",
+          "description": "REQUIRED: Power of the Battery Energy Storage System in Watts.",
+          "wordOrder": "big"
+        },
+        {
+          "id": "param-1761729065223",
+          "name": "SoC",
+          "registerType": "holding",
+          "address": 25,
+          "modbusId": 1,
+          "dataType": "float32",
+          "scaleFactor": 1,
+          "offset": 0,
+          "decimalPlaces": 0,
+          "unit": "%",
+          "description": "REQUIRED: State-of-Charge of the BESS in percent.",
+          "wordOrder": "big"
+        }
+      ]
+    },
+    {
+      "id": "device-1761729102748",
+      "name": "AFE",
+      "ipAddress": "192.168.6.228",
+      "port": 1025,
+      "parameters": [
+        {
+          "id": "param-1761729102748",
+          "name": "POWER",
+          "registerType": "holding",
+          "address": 5,
+          "modbusId": 1,
+          "dataType": "float32",
+          "scaleFactor": 1000,
+          "offset": 0,
+          "decimalPlaces": 0,
+          "unit": "W",
+          "description": "REQUIRED: Power of the AC/DC point in Watts.",
+          "wordOrder": "big"
+        },
+        {
+          "id": "param-1761729132991",
+          "name": "AVBL",
+          "registerType": "holding",
+          "address": 33,
+          "modbusId": 1,
+          "dataType": "float32",
+          "scaleFactor": 1,
+          "offset": 0,
+          "decimalPlaces": 0,
+          "unit": "-",
+          "description": "REQUIRED: Availability of the AC/DC point, can be either 0 or 1.",
+          "wordOrder": "big"
+        },
+        {
+          "id": "param-1761729161367",
+          "name": "GRIDSRVC",
+          "registerType": "holding",
+          "address": 47,
+          "modbusId": 1,
+          "dataType": "float32",
+          "scaleFactor": 1,
+          "offset": 0,
+          "decimalPlaces": 0,
+          "unit": "W",
+          "description": "REQUIRED: Gridservice amount of the AC/DC point in Watts.",
+          "wordOrder": "big"
+        }
+      ]
+    },
+    {
+      "id": "device-1761729958850",
+      "name": "LOAD",
+      "ipAddress": "192.168.6.228",
+      "port": 1025,
+      "parameters": [
+        {
+          "id": "param-1761729958850",
+          "name": "POWER",
+          "registerType": "holding",
+          "address": 27,
+          "modbusId": 1,
+          "dataType": "float32",
+          "scaleFactor": 1000,
+          "offset": 0,
+          "decimalPlaces": 0,
+          "unit": "W",
+          "description": "REQUIRED: Power of the load in Watts",
+          "wordOrder": "big"
+        }
+      ]
+    },
+    {
+      "id": "device-1761821431122",
+      "name": "EV1",
+      "ipAddress": "192.168.6.228",
+      "port": 1025,
+      "parameters": [
+        {
+          "id": "param-1761821431122",
+          "name": "POWER",
+          "registerType": "holding",
+          "address": 49,
+          "modbusId": 1,
+          "dataType": "float32",
+          "scaleFactor": 1000,
+          "offset": 0,
+          "decimalPlaces": 0,
+          "unit": "W",
+          "description": "REQUIRED: Instantaneous power of the unidirectional EV charger.",
+          "wordOrder": "big"
+        },
+        {
+          "id": "param-1761821574793",
+          "name": "SoC",
+          "registerType": "holding",
+          "address": 31,
+          "modbusId": 1,
+          "dataType": "float32",
+          "scaleFactor": 100,
+          "offset": 0,
+          "decimalPlaces": 0,
+          "unit": "%",
+          "description": "REQUIRED: SoC of the car connected to the unidirectional EV charger in percent.",
+          "wordOrder": "big"
+        },
+        {
+          "id": "param-1761821723696",
+          "name": "CAR_CAP",
+          "registerType": "holding",
+          "address": 35,
+          "modbusId": 1,
+          "dataType": "float32",
+          "scaleFactor": 1000,
+          "offset": 0,
+          "decimalPlaces": 0,
+          "unit": "Wh",
+          "description": "REQUIRED: Capacity of the car connected to the unidirectional EV charger in Watt-Hours",
+          "wordOrder": "big"
+        },
+        {
+          "id": "param-1761821761497",
+          "name": "CAR_MAX_POWER",
+          "registerType": "holding",
+          "address": 39,
+          "modbusId": 1,
+          "dataType": "float32",
+          "scaleFactor": 1000,
+          "offset": 0,
+          "decimalPlaces": 0,
+          "unit": "W",
+          "description": "REQUIRED: The maximum power the car can accept ",
+          "wordOrder": "big"
+        }
+      ]
+    },
+    {
+      "id": "device-1761821444777",
+      "name": "EV2",
+      "ipAddress": "192.168.6.228",
+      "port": 1025,
+      "parameters": [
+        {
+          "id": "param-1761821444777",
+          "name": "SoC",
+          "registerType": "holding",
+          "address": 29,
+          "modbusId": 1,
+          "dataType": "float32",
+          "scaleFactor": 100,
+          "offset": 0,
+          "decimalPlaces": 0,
+          "unit": "%",
+          "description": "REQUIRED: SoC of the car connected to bidirectional EV charger in percent",
+          "wordOrder": "big"
+        },
+        {
+          "id": "param-1761821609266",
+          "name": "POWER",
+          "registerType": "holding",
+          "address": 51,
+          "modbusId": 1,
+          "dataType": "float32",
+          "scaleFactor": 1000,
+          "offset": 0,
+          "decimalPlaces": 0,
+          "unit": "W",
+          "description": "REQUIRED: Instantaneous power of the bidirectional EV charger in Watts ",
+          "wordOrder": "big"
+        },
+        {
+          "id": "param-1761821804017",
+          "name": "CAR_CAP",
+          "registerType": "holding",
+          "address": 37,
+          "modbusId": 1,
+          "dataType": "float32",
+          "scaleFactor": 1000,
+          "offset": 0,
+          "decimalPlaces": 0,
+          "unit": "Wh",
+          "description": "REQUIRED: Capacity of the battery of the car connected to bidirectional EV charger in Wh",
+          "wordOrder": "big"
+        },
+        {
+          "id": "param-1761821804168",
+          "name": "CAR_MAX_POWER",
+          "registerType": "holding",
+          "address": 41,
+          "modbusId": 1,
+          "dataType": "float32",
+          "scaleFactor": 1000,
+          "offset": 0,
+          "decimalPlaces": 0,
+          "unit": "W",
+          "description": "REQUIRED: Maximum power the car connected to the bidirectional EV charger can provide/accept.",
+          "wordOrder": "big"
+        },
+        {
+          "id": "param-1761821804536",
+          "name": "CAR_AVBL",
+          "registerType": "holding",
+          "address": 45,
+          "modbusId": 1,
+          "dataType": "float32",
+          "scaleFactor": 1,
+          "offset": 0,
+          "decimalPlaces": 0,
+          "unit": "-",
+          "description": "REQUIRED: Parameters which shows if the car can discharge at the moment, can be either 0 or 1",
+          "wordOrder": "big"
+        },
+        {
+          "id": "param-1761821804696",
+          "name": "CAR_ARRIVAL",
+          "registerType": "holding",
+          "address": 43,
+          "modbusId": 1,
+          "dataType": "float32",
+          "scaleFactor": 100,
+          "offset": 0,
+          "decimalPlaces": 0,
+          "unit": "%",
+          "description": "REQUIRED: SoC of the car at the moment of arrival",
+          "wordOrder": "big"
+        }
+      ]
+    }
+  ]
+}
