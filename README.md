@@ -5,13 +5,18 @@
 
 This project has received funding from the European Union's Horizon Europe research and innovation programme under grant agreement No. 101136131.
 
+## Documentation
+Documentation for the project can be found here:
+
+- [EMS Docs](https://shift2dc.github.io/docs.ems/)
+
 ## Architecture
 The default high-level architecture for which this EMS is built is depicted on the following figure:
 ![](./docs/high-level-architecture.jpg)
 
 ## Project's Structure:
 ------------
-    ├── docs                      <- Contains docs.html with more detailed documentation
+    ├── docs                      <- Contains documentation images
     │
     ├── system-coordination       <- Contains code to manage optimization, database interaction, etc.
     │
