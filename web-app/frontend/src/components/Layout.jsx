@@ -46,7 +46,7 @@ function Layout() {
       </SidebarProvider>
       {!isDevicesRoute && (
         <footer className="bg-gray-100 text-center py-4 text-sm text-gray-600">
-          © {new Date().getFullYear()} EMS for SHIFT2DC. Horizon Europe. Grant Agreement. No. 101136131.
+          © {new Date().getFullYear()} EMS4DC for SHIFT2DC. Horizon Europe. Grant Agreement №101136131.
         </footer>
       )}
     </div>

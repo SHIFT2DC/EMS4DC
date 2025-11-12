@@ -43,7 +43,7 @@ function Header() {
       <div className="container mx-auto px-4 h-full">
         <div className="flex items-center justify-between h-full">
           <TurboLink to="/" className="text-2xl font-bold tracking-tight hover:text-blue-200 transition-colors">
-          EMS
+          EMS4DC
           </TurboLink>
           <nav>
             <ul className="flex space-x-2">

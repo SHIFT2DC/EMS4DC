@@ -1,5 +1,5 @@
-# SHIFT2DC Energy Management System by Eaton
-**Developed as part of the SHIFT2DC Project**
+# EMS4DC
+EMS4DC is an energy management system developed as part of the SHIFT2DC Project.
 
 ## Funding Acknowledgment
 
@@ -8,7 +8,7 @@ This project has received funding from the European Union's Horizon Europe resea
 ## Documentation
 Documentation for the project can be found here:
 
-- [EMS Docs](https://shift2dc.github.io/docs.ems/)
+- [EMS4DC Docs](https://shift2dc.github.io/docs.ems/)
 
 ## Architecture
 The default high-level architecture for which this EMS is built is depicted on the following figure:
@@ -30,5 +30,3 @@ The default high-level architecture for which this EMS is built is depicted on t
     │
     └── README.md                 
 --------
-
-
