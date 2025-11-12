@@ -23,11 +23,12 @@ Version: v1.0.0
 '''
 
 import requests
-from docplex.mp.model import Model
+
 import fetchDatabase
 import psycopg2
 from datetime import datetime
 from POptApplier import ConfigPOptUpdater
+import pyomo.environ as pyo
 
 import json
 
@@ -171,159 +172,133 @@ class OptimizerMode():
         conn.close()
 
     def execute(self):
-
-        # receive the latest average 15-min data from the database
+        # Receive the latest average 15-min data from the database
         averaged_data = self.get_latest_15_min_interval()
         recent_data = self.get_most_recent_data()
 
+        # Extract inputs
         v2_init = recent_data["EV2_SoC"] / 100
         v1_init = recent_data["EV1_SoC"] / 100
         pv_fct = abs(averaged_data["PV_POWER"]) / 1000
         ld_fct = averaged_data["LOAD_POWER"] / 1000
         afe_abl = recent_data["AFE_AVBL"]
         grid_svc = recent_data["AFE_GRIDSRVC"] / 1000
-        bl_init = recent_data["BESS_SoC"] # TODO: Add handler to get latest SoC, not averaged one
+        bl_init = recent_data["BESS_SoC"]
         v1_c = recent_data["EV1_CAR_CAP"] / 1000
         v2_c = recent_data["EV2_CAR_CAP"] / 1000
         v1_p = recent_data["EV1_CAR_MAX_POWER"] / 1000
         v2_p = recent_data["EV2_CAR_MAX_POWER"] / 1000
-        v2_arr = recent_data["EV2_CAR_ARRIVAL"] / 100 # TODO: Add handler to get arrival SoC of the car2
-        v2_abl = recent_data["EV2_CAR_AVBL"] # TODO: Add handler to get ability to discharge
+        v2_arr = recent_data["EV2_CAR_ARRIVAL"] / 100
+        v2_abl = recent_data["EV2_CAR_AVBL"]
 
+        # Store inputs
         ems_input = {
-            "pv_fct": pv_fct,
-            "ld_fct": ld_fct,
-            "afe_max": self.afe_max,
-            "afe_abl": afe_abl,
-            "grid_svc": grid_svc,
-            "be": self.be,
-            "bl_min": self.bl_min,
-            "bl_max": self.bl_max,
-            "bc_max": self.bc_max,
-            "bl_init": bl_init,
-            "bl_fault": self.bl_fault,
-            "v1_p": v1_p,
-            "v1_c": v1_c,
-            "v1_init": v1_init,
-            "v2_p": v2_p,
-            "v2_c": v2_c,
-            "v2_init": v2_init,
-            "v2_arr": v2_arr,
-            "v2_trg": self.v2_trg,
-            "v2_abl": v2_abl,
-            "c1_eff": self.c1_eff,
-            "c1_p": self.c1_p,
-            "c2_eff": self.c2_eff,
-            "c2_p": self.c2_p,
+            "pv_fct": pv_fct, "ld_fct": ld_fct, "afe_max": self.afe_max, "afe_abl": afe_abl,
+            "grid_svc": grid_svc, "be": self.be, "bl_min": self.bl_min, "bl_max": self.bl_max,
+            "bc_max": self.bc_max, "bl_init": bl_init, "bl_fault": self.bl_fault,
+            "v1_p": v1_p, "v1_c": v1_c, "v1_init": v1_init, "v2_p": v2_p, "v2_c": v2_c,
+            "v2_init": v2_init, "v2_arr": v2_arr, "v2_trg": self.v2_trg, "v2_abl": v2_abl,
+            "c1_eff": self.c1_eff, "c1_p": self.c1_p, "c2_eff": self.c2_eff, "c2_p": self.c2_p
         }
-
         self.insert_inputs_to_db(ems_input)
 
-        mdl = Model('EMS_Optimization')
+        # Build Pyomo model
+        m = pyo.ConcreteModel()
 
         # Decision variables
-        imp = mdl.continuous_var(lb=0, name='imp')
-        exp = mdl.continuous_var(lb=0, name='exp')
-        exp1 = mdl.continuous_var(lb=0, name='exp1')
-        exp2 = mdl.continuous_var(lb=0, name='exp2')
-        pv = mdl.continuous_var(lb=0, name='pv')
-        ld = mdl.continuous_var(lb=0, name='ld')
-        bc = mdl.continuous_var(lb=0, name='bc')
-        bd = mdl.continuous_var(lb=0, name='bd')
-        bl = mdl.continuous_var(ub=self.bl_max, name='bl')
-        c1_ch = mdl.continuous_var(lb=0, name='c1_ch')
-        c2_ch = mdl.continuous_var(lb=0, name='c2_ch')
-        c2_dis = mdl.continuous_var(lb=0, name='c2_dis')
-        v1_soc = mdl.continuous_var(lb=0, ub=1, name='v1_soc')
-        v2_soc = mdl.continuous_var(lb=0, ub=1, name='v2_soc')
+        m.imp = pyo.Var(domain=pyo.NonNegativeReals)
+        m.exp = pyo.Var(domain=pyo.NonNegativeReals)
+        m.exp1 = pyo.Var(domain=pyo.NonNegativeReals)
+        m.exp2 = pyo.Var(domain=pyo.NonNegativeReals)
+        m.pv = pyo.Var(domain=pyo.NonNegativeReals)
+        m.ld = pyo.Var(domain=pyo.NonNegativeReals)
+        m.bc = pyo.Var(domain=pyo.NonNegativeReals)
+        m.bd = pyo.Var(domain=pyo.NonNegativeReals)
+        m.bl = pyo.Var(bounds=(0, self.bl_max))
+        m.c1_ch = pyo.Var(domain=pyo.NonNegativeReals)
+        m.c2_ch = pyo.Var(domain=pyo.NonNegativeReals)
+        m.c2_dis = pyo.Var(domain=pyo.NonNegativeReals)
+        m.v1_soc = pyo.Var(bounds=(0, 1))
+        m.v2_soc = pyo.Var(bounds=(0, 1))
+        m.c2_mod = pyo.Var(domain=pyo.Binary)
+        m.afe_mod = pyo.Var(domain=pyo.Binary)
+        m.bm = pyo.Var(domain=pyo.Binary)
 
-        # Binary decision variables
-        c2_mod = mdl.binary_var(name='c2_mod')
-        afe_mod = mdl.binary_var(name='afe_mod')
-        bm = mdl.binary_var(name='bm')
-
-        # Objective function
-        mdl.maximize(
-            self.w1 * pv +
-            self.w2 * ld +
-            self.w3 * min(0.8, max(0.2, v2_init)) * c1_ch +
-            self.w3 * min(0.8, max(0.2, v1_init)) * c2_ch +
-            self.w4 * exp2 +
-            self.w5 * bc +
-            self.w6 * bd +
-            self.w7 * imp +
-            self.w8 * c2_dis
+        # Objective
+        m.obj = pyo.Objective(
+            expr=self.w1 * m.pv +
+                self.w2 * m.ld +
+                self.w3 * min(0.8, max(0.2, v2_init)) * m.c1_ch +
+                self.w3 * min(0.8, max(0.2, v1_init)) * m.c2_ch +
+                self.w4 * m.exp2 +
+                self.w5 * m.bc +
+                self.w6 * m.bd +
+                self.w7 * m.imp +
+                self.w8 * m.c2_dis,
+            sense=pyo.maximize
         )
 
         # Constraints
-        mdl.add_constraints([
-            pv <= pv_fct,
-            ld <= ld_fct,
-            imp <= afe_mod * self.afe_max * afe_abl if grid_svc == 0 else imp <= 0,
-            exp <= (1 - afe_mod) * self.afe_max * afe_abl,
-            exp == exp1 + exp2,
-            exp2 <= grid_svc,
-            bl == bl_init + self.be * bc - bd / self.be,
-            bc <= bm * self.bc_max,
-            bd <= (1 - bm) * self.bc_max,
-            bl >= self.bl_min if afe_abl == 1 else bl >= self.bl_fault,
-            imp + pv + bd + c2_dis == exp + ld + bc + c1_ch + c2_ch,
-            v1_soc == v1_init + self.c1_eff * c1_ch / (v1_c if v1_c > 0.2 else 1),
-            v2_soc == v2_init + self.c2_eff * c2_ch / (v2_c if v2_c > 0.2 else 1) - c2_dis / (self.c2_eff * (v2_c if v2_c > 0.2 else 1)),
-            c1_ch <= min(v1_p, self.c1_p),
-            c2_ch <= c2_mod * min(v2_p, self.c2_p),
-            c2_dis <= (
-                (1 - c2_mod) *
-                min(v2_p, self.c2_p, (v2_init - v2_arr - self.v2_trg) * self.c2_eff * v2_c)
-                if v2_init >= v2_arr + self.v2_trg and v2_abl == 1 and afe_abl != 1
-                else 0
-            )
-        ])
+        m.constraints = pyo.ConstraintList()
+        m.constraints.add(m.pv <= pv_fct)
+        m.constraints.add(m.ld <= ld_fct)
+        m.constraints.add(m.imp <= m.afe_mod * self.afe_max * afe_abl if grid_svc == 0 else m.imp <= 0)
+        m.constraints.add(m.exp <= (1 - m.afe_mod) * self.afe_max * afe_abl)
+        m.constraints.add(m.exp == m.exp1 + m.exp2)
+        m.constraints.add(m.exp2 <= grid_svc)
+        m.constraints.add(m.bl == bl_init + self.be * m.bc - m.bd / self.be)
+        m.constraints.add(m.bc <= m.bm * self.bc_max)
+        m.constraints.add(m.bd <= (1 - m.bm) * self.bc_max)
+        m.constraints.add(m.bl >= self.bl_min if afe_abl == 1 else m.bl >= self.bl_fault)
+        m.constraints.add(m.imp + m.pv + m.bd + m.c2_dis == m.exp + m.ld + m.bc + m.c1_ch + m.c2_ch)
+        m.constraints.add(m.v1_soc == v1_init + self.c1_eff * m.c1_ch / (v1_c if v1_c > 0.2 else 1))
+        m.constraints.add(m.v2_soc == v2_init + self.c2_eff * m.c2_ch / (v2_c if v2_c > 0.2 else 1) -
+                        m.c2_dis / (self.c2_eff * (v2_c if v2_c > 0.2 else 1)))
+        m.constraints.add(m.c1_ch <= min(v1_p, self.c1_p))
+        m.constraints.add(m.c2_ch <= m.c2_mod * min(v2_p, self.c2_p))
+        if v2_init >= v2_arr + self.v2_trg and v2_abl == 1 and afe_abl != 1:
+            m.constraints.add(m.c2_dis <= (1 - m.c2_mod) * min(
+                v2_p, self.c2_p, (v2_init - v2_arr - self.v2_trg) * self.c2_eff * v2_c))
+        else:
+            m.constraints.add(m.c2_dis <= 0)
 
-        mdl.context.solver.log_output = False
-        solution = mdl.solve()
+        # Solve with HiGHS
+        solver = pyo.SolverFactory('highs')
+        result = solver.solve(m)
 
-
-        ems_output ={}
-        if solution:
+        # Output handling
+        if result.solver.status == pyo.SolverStatus.ok and result.solver.termination_condition == pyo.TerminationCondition.optimal:
             ems_output = {
-                "obj": round(solution.get_objective_value(), 4),
-                "imp": round(imp.solution_value, 4),
-                "exp": round(exp.solution_value, 4),
-                "exp1": round(exp1.solution_value, 4),
-                "exp2": round(exp2.solution_value, 4),
-                "pv": round(pv.solution_value, 4),
-                "ld": round(ld.solution_value, 4),
-                "bc": round(bc.solution_value, 4),
-                "bd": round(bd.solution_value, 4),
-                "bl": round(bl.solution_value, 4),
-                "c1_ch": round(c1_ch.solution_value, 4),
-                "c2_ch": round(c2_ch.solution_value, 4),
-                "c2_dis": round(c2_dis.solution_value, 4),
-                "v1_soc": round(v1_soc.solution_value, 4),
-                "v2_soc": round(v2_soc.solution_value, 4)
+                "obj": round(pyo.value(m.obj), 4),
+                "imp": round(pyo.value(m.imp), 4),
+                "exp": round(pyo.value(m.exp), 4),
+                "exp1": round(pyo.value(m.exp1), 4),
+                "exp2": round(pyo.value(m.exp2), 4),
+                "pv": round(pyo.value(m.pv), 4),
+                "ld": round(pyo.value(m.ld), 4),
+                "bc": round(pyo.value(m.bc), 4),
+                "bd": round(pyo.value(m.bd), 4),
+                "bl": round(pyo.value(m.bl), 4),
+                "c1_ch": round(pyo.value(m.c1_ch), 4),
+                "c2_ch": round(pyo.value(m.c2_ch), 4),
+                "c2_dis": round(pyo.value(m.c2_dis), 4),
+                "v1_soc": round(pyo.value(m.v1_soc), 4),
+                "v2_soc": round(pyo.value(m.v2_soc), 4)
             }
-            # Insert outputs to database
             self.insert_outputs_to_db(ems_output, quality='ok')
-            
-            # Update p_opt values in config.json
             try:
-                update_success = self.config_updater.update_p_opt_values(ems_output)
-                if update_success:
-                    print("Config p_opt values updated successfully")
-                else:
-                    print("Warning: Failed to update config p_opt values")
+                updated = self.config_updater.update_p_opt_values(ems_output)
+                print("Config updated" if updated else "Warning: update failed")
             except Exception as e:
-                print(f"Error updating config p_opt values: {e}")
-            
-            return ems_output
+                print(f"Update error: {e}")
         else:
             ems_output = {k: -1 for k in [
                 "obj", "imp", "exp", "exp1", "exp2", "pv", "ld", "bc", "bd",
                 "bl", "c1_ch", "c2_ch", "c2_dis", "v1_soc", "v2_soc"
             ]}
             self.insert_outputs_to_db(ems_output, quality='error')
-            return ems_output
+
+        return ems_output
 
     def validate(self):
         """Check if optimizer is available"""
