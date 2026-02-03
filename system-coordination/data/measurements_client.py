@@ -1,7 +1,7 @@
 '''
 SPDX-License-Identifier: Apache-2.0
 
-Copyright 2025 Eaton
+Copyright 2026 Eaton
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,13 +14,14 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 
-File: fetchMeasurements.py
+File: measurements_client.py
 Description: # TODO: Add desc
 
 Created: 31st July 2025
-Last Modified: 30th October 2025
-Version: v1.0.0
+Last Modified: 3rd February 2026
+Version: v1.2.0
 '''
+
 
 import json
 import time
@@ -33,7 +34,8 @@ import struct
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections import defaultdict
 
-logging.basicConfig(level=logging.INFO)
+from utils.logging_utils import setup_logging
+setup_logging
 logger = logging.getLogger(__name__)
 
 class ModbusDataReader:
@@ -175,6 +177,104 @@ class ModbusDataReader:
                 except Exception as e:
                     logger.error(f"Error reading device {name}: {e}")
         return data
+        
+    def write_single_register(self, device_name, parameter_name, value):
+        """
+        Write a single register value to a device
+        
+        Args:
+            device_name: Name of the device in config
+            parameter_name: Name of the parameter to write
+            value: Raw value to write (after scaling applied)
+        
+        Returns:
+            bool: Success status
+        """
+        # Find device and parameter in config
+        device = next((d for d in self.config['devices'] if d['name'] == device_name), None)
+        if not device:
+            logger.error(f"Device {device_name} not found in config")
+            return False
+        
+        param = next((p for p in device['parameters'] 
+                    if p['name'] == parameter_name and p.get('mode') == 'write'), None)
+        if not param:
+            logger.error(f"Write parameter {parameter_name} not found for device {device_name}")
+            return False
+        
+        client = self.get_client(device['ipAddress'], device['port'])
+        if not client:
+            return False
+        
+        try:
+            # Reverse the scaling
+            raw_value = self.reverse_scaling(value, param)
+            
+            register_type = param['registerType'].lower()
+            address = param['address']
+            modbus_id = param['modbusId']
+            
+            if param['dataType'].lower() == 'float32':
+                # Handle float32 writes
+                raw_bytes = struct.pack(">f", raw_value)
+                if param.get('wordOrder', 'big') == 'big':
+                    raw_hi = int.from_bytes(raw_bytes[0:2], 'big')
+                    raw_lo = int.from_bytes(raw_bytes[2:4], 'big')
+                else:
+                    raw_lo = int.from_bytes(raw_bytes[0:2], 'big')
+                    raw_hi = int.from_bytes(raw_bytes[2:4], 'big')
+                
+                if register_type == 'holding':
+                    result = client.write_registers(address, [raw_hi, raw_lo], device_id=modbus_id)
+                else:
+                    logger.error(f"Cannot write to {register_type} registers")
+                    return False
+            else:
+                # Handle integer writes
+                raw_value_int = int(raw_value)
+                if register_type == 'holding':
+                    result = client.write_register(address, raw_value_int, device_id=modbus_id)
+                else:
+                    logger.error(f"Cannot write to {register_type} registers")
+                    return False
+            
+            if result.isError():
+                logger.error(f"Error writing to {parameter_name}: {result}")
+                return False
+            
+            logger.info(f"Successfully wrote {value} to {device_name}.{parameter_name}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Exception writing register: {e}")
+            return False
+
+    def reverse_scaling(self, scaled_value, parameter):
+        """Reverse the scaling to get raw register value"""
+        try:
+            scale_factor = float(parameter.get('scaleFactor', 1.0))
+            offset = float(parameter.get('offset', 0.0))
+            raw_value = (scaled_value - offset) / scale_factor
+            return raw_value
+        except Exception as e:
+            logger.error(f"Reverse scaling error for {parameter['name']}: {e}")
+            return scaled_value
+
+    def write_multiple_registers(self, device_name, setpoints):
+        """
+        Write multiple register values to a device
+        
+        Args:
+            device_name: Name of the device in config
+            setpoints: Dict mapping parameter names to values
+        
+        Returns:
+            dict: Results for each parameter {param_name: success_bool}
+        """
+        results = {}
+        for param_name, value in setpoints.items():
+            results[param_name] = self.write_single_register(device_name, param_name, value)
+        return results
 
     def read_data_as_json(self):
         return json.dumps(self.read_all_data_parallel(), indent=2)
@@ -200,7 +300,7 @@ if __name__ == "__main__":
         if len(sys.argv) > 1:
             config_path = sys.argv[1]
         else:
-            config_path = '../web-app/backend/modbus.json'
+            config_path = '../../web-app/backend/modbus.json'
         
         if not os.path.exists(config_path):
             logger.error(f"Configuration file {config_path} not found")

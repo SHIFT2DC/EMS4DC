@@ -1,7 +1,7 @@
 /*
 SPDX-License-Identifier: Apache-2.0
 
-Copyright 2025 Eaton
+Copyright 2026 Eaton
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,24 +18,154 @@ File: page-modbus-config.jsx
 Description: # TODO: Add desc
 
 Created: 1st January 2025
-Last Modified: 30th October 2025
-Version: v1.0.0
+Last Modified: 3rd February 2026
+Version: v1.2.0
 */
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, memo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Trash2, Plus, Save, Server, RefreshCw, AlertCircle } from "lucide-react"
+import { Trash2, Plus, Save, Server, RefreshCw, AlertCircle, Eye, EyeOff } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Textarea } from "@/components/ui/textarea"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+
+const ParameterRow = memo(({ deviceId, param, onUpdate, onRemove, canRemove }) => {
+  return (
+    <div className="grid grid-cols-12 gap-2 items-start py-2 border-b last:border-b-0">
+      <div className="col-span-2">
+        <Input
+          value={param.name}
+          onChange={(e) => onUpdate(deviceId, param.id, "name", e.target.value)}
+          placeholder="Name"
+          className="h-8 text-sm"
+        />
+      </div>
+      <div className="col-span-1">
+        <Select
+          value={param.registerType}
+          onValueChange={(value) => onUpdate(deviceId, param.id, "registerType", value)}
+        >
+          <SelectTrigger className="h-8 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="holding">Holding</SelectItem>
+            <SelectItem value="input">Input</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="col-span-1">
+        <Input
+          type="number"
+          value={param.address}
+          onChange={(e) => onUpdate(deviceId, param.id, "address", e.target.value)}
+          placeholder="Addr"
+          className="h-8 text-sm"
+        />
+      </div>
+      <div className="col-span-1">
+        <Input
+          type="number"
+          value={param.modbusId}
+          onChange={(e) => onUpdate(deviceId, param.id, "modbusId", e.target.value)}
+          placeholder="ID"
+          className="h-8 text-sm"
+        />
+      </div>
+      <div className="col-span-1">
+        <Select
+          value={param.dataType}
+          onValueChange={(value) => onUpdate(deviceId, param.id, "dataType", value)}
+        >
+          <SelectTrigger className="h-8 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="uint16">u16</SelectItem>
+            <SelectItem value="int16">i16</SelectItem>
+            <SelectItem value="float32">f32</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      {param.dataType === "float32" && (
+        <div className="col-span-1">
+          <Select
+            value={param.wordOrder}
+            onValueChange={(value) => onUpdate(deviceId, param.id, "wordOrder", value)}
+          >
+            <SelectTrigger className="h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="big">BE</SelectItem>
+              <SelectItem value="little">LE</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+      <div className={param.dataType === "float32" ? "col-span-1" : "col-span-2"}>
+        <Input
+          type="number"
+          step="any"
+          value={param.scaleFactor}
+          onChange={(e) => onUpdate(deviceId, param.id, "scaleFactor", e.target.value)}
+          placeholder="Scale"
+          className="h-8 text-sm"
+        />
+      </div>
+      <div className="col-span-1">
+        <Input
+          type="number"
+          step="any"
+          value={param.offset}
+          onChange={(e) => onUpdate(deviceId, param.id, "offset", e.target.value)}
+          placeholder="Offset"
+          className="h-8 text-sm"
+        />
+      </div>
+      <div className="col-span-1">
+        <Input
+          type="number"
+          min="0"
+          max="10"
+          value={param.decimalPlaces}
+          onChange={(e) => onUpdate(deviceId, param.id, "decimalPlaces", e.target.value)}
+          placeholder="Dec"
+          className="h-8 text-sm"
+        />
+      </div>
+      <div className="col-span-1">
+        <Input
+          value={param.unit}
+          onChange={(e) => onUpdate(deviceId, param.id, "unit", e.target.value)}
+          placeholder="Unit"
+          className="h-8 text-sm"
+        />
+      </div>
+      <div className="col-span-1 flex justify-end">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onRemove(deviceId, param.id)}
+          disabled={!canRemove}
+          className="h-8 w-8 p-0"
+        >
+          <Trash2 className="h-3 w-3" />
+        </Button>
+      </div>
+    </div>
+  )
+})
+
+ParameterRow.displayName = "ParameterRow"
 
 export default function ModbusConfigPage() {
-  // Initialize with default values
   const [config, setConfig] = useState({
     devices: [
       {
@@ -57,6 +187,7 @@ export default function ModbusConfigPage() {
             unit: "",
             description: "",
             wordOrder: "big",
+            mode: "read",
           },
         ],
       },
@@ -66,13 +197,12 @@ export default function ModbusConfigPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [loadError, setLoadError] = useState(null)
+  const [showPreview, setShowPreview] = useState(false)
 
-  // Load configuration on component mount
   useEffect(() => {
     loadConfig()
   }, [])
 
-  // Load configuration from server
   const loadConfig = async () => {
     setIsLoading(true)
     setLoadError(null)
@@ -84,7 +214,6 @@ export default function ModbusConfigPage() {
       if (response.ok) {
         const loadedConfig = await response.json()
 
-        // Ensure all items have unique IDs and parameters with defaults
         const configWithIds = {
           ...loadedConfig,
           devices: loadedConfig.devices.map((device) => ({
@@ -103,6 +232,7 @@ export default function ModbusConfigPage() {
               unit: param.unit || "",
               description: param.description || "",
               wordOrder: param.wordOrder || "big",
+              mode: param.mode || "read",
             })),
           })),
         }
@@ -128,7 +258,6 @@ export default function ModbusConfigPage() {
     }
   }
 
-  // Add a new device
   const addDevice = () => {
     setConfig({
       ...config,
@@ -153,6 +282,7 @@ export default function ModbusConfigPage() {
               unit: "",
               description: "",
               wordOrder: "big",
+              mode: "read",
             },
           ],
         },
@@ -160,7 +290,6 @@ export default function ModbusConfigPage() {
     })
   }
 
-  // Remove a device
   const removeDevice = (deviceId) => {
     setConfig({
       ...config,
@@ -168,7 +297,6 @@ export default function ModbusConfigPage() {
     })
   }
 
-  // Update a device
   const updateDevice = (deviceId, field, value) => {
     setConfig({
       ...config,
@@ -176,8 +304,7 @@ export default function ModbusConfigPage() {
     })
   }
 
-  // Add a parameter to a device
-  const addParameter = (deviceId) => {
+  const addParameter = (deviceId, mode = "read") => {
     setConfig({
       ...config,
       devices: config.devices.map((device) => {
@@ -199,6 +326,7 @@ export default function ModbusConfigPage() {
                 unit: "",
                 description: "",
                 wordOrder: "big",
+                mode: mode,
               },
             ],
           }
@@ -208,7 +336,6 @@ export default function ModbusConfigPage() {
     })
   }
 
-  // Remove a parameter from a device
   const removeParameter = (deviceId, paramId) => {
     setConfig({
       ...config,
@@ -224,7 +351,6 @@ export default function ModbusConfigPage() {
     })
   }
 
-  // Update a parameter
   const updateParameter = (deviceId, paramId, field, value) => {
     setConfig({
       ...config,
@@ -234,7 +360,6 @@ export default function ModbusConfigPage() {
             ...device,
             parameters: device.parameters.map((param) => {
               if (param.id === paramId) {
-                // Handle numeric fields
                 if (["address", "modbusId", "scaleFactor", "offset", "decimalPlaces"].includes(field)) {
                   return { ...param, [field]: Number(value) }
                 }
@@ -249,13 +374,12 @@ export default function ModbusConfigPage() {
     })
   }
 
-  // Save configuration to modbus.json
   const saveConfig = async () => {
     setIsSaving(true)
 
     try {
       const API_BASE_URL = import.meta.env.VITE_BASE_URL
-      const response = await fetch(`${API_BASE_URL}/api/save-modbus-config`, {
+      const response = await fetch(`${API_BASE_URL}/api/modbus-config/save`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -298,9 +422,9 @@ export default function ModbusConfigPage() {
   }
 
   return (
-    <div className="container mx-auto py-10">
+    <div className="container mx-auto py-6">
       {loadError && (
-        <Alert className="mb-6" variant="destructive">
+        <Alert className="mb-4" variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
             Failed to load saved configuration: {loadError}. Using default configuration.
@@ -308,297 +432,217 @@ export default function ModbusConfigPage() {
         </Alert>
       )}
       <Card className="w-full">
-        <CardHeader>
-          <CardTitle>Modbus Configuration</CardTitle>
-          <CardDescription>Configure multiple Modbus devices and their parameters</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
+        <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-medium">Devices</h3>
+            <div>
+              <CardTitle>Modbus Configuration</CardTitle>
+              <CardDescription>Configure multiple Modbus devices and their parameters</CardDescription>
+            </div>
             <div className="flex gap-2">
+              <Button onClick={() => setShowPreview(!showPreview)} variant="outline" size="sm">
+                {showPreview ? <EyeOff className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
+                {showPreview ? "Hide" : "Show"} Preview
+              </Button>
               <Button onClick={loadConfig} variant="outline" size="sm" disabled={isLoading}>
                 <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
-                Reload Config
+                Reload
               </Button>
               <Button onClick={addDevice} variant="outline" size="sm">
                 <Server className="h-4 w-4 mr-2" />
                 Add Device
               </Button>
+              <Button onClick={saveConfig} disabled={isSaving}>
+                {isSaving ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+                Save
+              </Button>
             </div>
           </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
           <Accordion type="multiple" className="w-full">
-            {config.devices.map((device) => (
-              <AccordionItem key={device.id} value={device.id}>
-                <AccordionTrigger className="hover:bg-muted/50 px-4 rounded-md">
-                  <div className="flex items-center justify-between w-full pr-4">
-                    <span>
-                      {device.name} ({device.ipAddress})
-                    </span>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="px-4 pt-4 pb-2">
-                  <Card className="border border-muted">
-                    <CardContent className="pt-6">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                        <div className="space-y-2">
-                          <Label htmlFor={`device-name-${device.id}`}>Device Name</Label>
+            {config.devices.map((device) => {
+              const readParams = device.parameters.filter((p) => p.mode === "read")
+              const writeParams = device.parameters.filter((p) => p.mode === "write")
+
+              return (
+                <AccordionItem key={device.id} value={device.id}>
+                  <AccordionTrigger className="hover:bg-muted/50 px-3 rounded-md">
+                    <div className="flex items-center justify-between w-full pr-4">
+                      <span className="font-medium">
+                        {device.name} ({device.ipAddress}:{device.port})
+                      </span>
+                      <span className="text-sm text-muted-foreground">
+                        {readParams.length} read / {writeParams.length} write
+                      </span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-3 pt-3 pb-2">
+                    <div className="space-y-4">
+                      {/* Device Info */}
+                      <div className="grid grid-cols-4 gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-xs">Device Name</Label>
                           <Input
-                            id={`device-name-${device.id}`}
                             value={device.name}
                             onChange={(e) => updateDevice(device.id, "name", e.target.value)}
                             placeholder="Device name"
+                            className="h-8"
                           />
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor={`device-ip-${device.id}`}>IP Address</Label>
+                        <div className="space-y-1">
+                          <Label className="text-xs">IP Address</Label>
                           <Input
-                            id={`device-ip-${device.id}`}
                             value={device.ipAddress}
                             onChange={(e) => updateDevice(device.id, "ipAddress", e.target.value)}
                             placeholder="192.168.1.100"
+                            className="h-8"
                           />
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor={`device-port-${device.id}`}>Port</Label>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Port</Label>
                           <Input
-                            id={`device-port-${device.id}`}
                             type="number"
                             value={device.port}
                             onChange={(e) => updateDevice(device.id, "port", Number.parseInt(e.target.value))}
                             placeholder="502"
+                            className="h-8"
                           />
                         </div>
-                      </div>
-                      <div className="flex items-center justify-between mb-4">
-                        <h4 className="text-md font-medium">Parameters</h4>
-                        <div className="flex gap-2">
-                          <Button onClick={() => addParameter(device.id)} variant="outline" size="sm">
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add Parameter
-                          </Button>
+                        <div className="space-y-1 flex items-end">
                           <Button
                             onClick={() => removeDevice(device.id)}
                             variant="destructive"
                             size="sm"
                             disabled={config.devices.length <= 1}
+                            className="h-8 w-full"
                           >
-                            <Trash2 className="h-4 w-4 mr-2" />
+                            <Trash2 className="h-3 w-3 mr-2" />
                             Remove Device
                           </Button>
                         </div>
                       </div>
-                      {device.parameters.map((param) => (
-                        <Card key={param.id} className="border border-muted mb-4">
-                          <CardContent className="pt-6">
-                            <div className="space-y-6">
-                              {/* Basic Configuration */}
-                              <div>
-                                <h5 className="text-sm font-medium mb-3 text-muted-foreground">Basic Configuration</h5>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                  <div className="space-y-2">
-                                    <Label htmlFor={`name-${param.id}`}>Name</Label>
-                                    <Input
-                                      id={`name-${param.id}`}
-                                      value={param.name}
-                                      onChange={(e) => updateParameter(device.id, param.id, "name", e.target.value)}
-                                      placeholder="Parameter name"
-                                    />
-                                  </div>
-                                  <div className="space-y-2">
-                                    <Label htmlFor={`type-${param.id}`}>Register Type</Label>
-                                    <Select
-                                      value={param.registerType}
-                                      onValueChange={(value) =>
-                                        updateParameter(device.id, param.id, "registerType", value)
-                                      }
-                                    >
-                                      <SelectTrigger id={`type-${param.id}`}>
-                                        <SelectValue placeholder="Select type" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="holding">Holding Register</SelectItem>
-                                        <SelectItem value="input">Input Register</SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                  <div className="space-y-2">
-                                    <Label htmlFor={`address-${param.id}`}>Modbus Address</Label>
-                                    <Input
-                                      id={`address-${param.id}`}
-                                      type="number"
-                                      value={param.address}
-                                      onChange={(e) => updateParameter(device.id, param.id, "address", e.target.value)}
-                                      placeholder="1"
-                                    />
-                                  </div>
-                                  <div className="space-y-2">
-                                    <Label htmlFor={`modbusId-${param.id}`}>Modbus ID</Label>
-                                    <Input
-                                      id={`modbusId-${param.id}`}
-                                      type="number"
-                                      value={param.modbusId}
-                                      onChange={(e) => updateParameter(device.id, param.id, "modbusId", e.target.value)}
-                                      placeholder="1"
-                                    />
-                                  </div>
-                                </div>
+
+                      {/* Parameters Tabs */}
+                      <Tabs defaultValue="read" className="w-full">
+                        <div className="flex items-center justify-between mb-2">
+                          <TabsList className="h-8">
+                            <TabsTrigger value="read" className="text-xs">
+                              Read Parameters ({readParams.length})
+                            </TabsTrigger>
+                            <TabsTrigger value="write" className="text-xs">
+                              Write Parameters ({writeParams.length})
+                            </TabsTrigger>
+                          </TabsList>
+                        </div>
+
+                        <TabsContent value="read" className="mt-0">
+                          <Card>
+                            <CardContent className="p-3">
+                              {/* Header */}
+                              <div className="grid grid-cols-12 gap-2 pb-2 mb-2 border-b font-medium text-xs text-muted-foreground">
+                                <div className="col-span-2">Name</div>
+                                <div className="col-span-1">Type</div>
+                                <div className="col-span-1">Addr</div>
+                                <div className="col-span-1">ID</div>
+                                <div className="col-span-1">Data</div>
+                                <div className="col-span-2">Scale</div>
+                                <div className="col-span-1">Offset</div>
+                                <div className="col-span-1">Dec</div>
+                                <div className="col-span-1">Unit</div>
+                                <div className="col-span-1"></div>
                               </div>
-
-                              {/* Data Processing */}
-                              <div>
-                                <h5 className="text-sm font-medium mb-3 text-muted-foreground">Data Processing</h5>
-                                <div
-                                  className={`grid grid-cols-1 md:grid-cols-2 gap-4 ${param.dataType === "float32" ? "lg:grid-cols-6" : "lg:grid-cols-4"}`}
-                                >
-                                  <div className="space-y-2">
-                                    <Label htmlFor={`dataType-${param.id}`}>Data Type</Label>
-                                    <Select
-                                      value={param.dataType}
-                                      onValueChange={(value) => updateParameter(device.id, param.id, "dataType", value)}
-                                    >
-                                      <SelectTrigger id={`dataType-${param.id}`}>
-                                        <SelectValue placeholder="Select data type" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="uint16">uint16</SelectItem>
-                                        <SelectItem value="int16">int16</SelectItem>
-                                        <SelectItem value="float32">float32</SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-
-                                  {param.dataType === "float32" && (
-                                    <>
-                                      <div className="space-y-2">
-                                        <Label htmlFor={`wordOrder-${param.id}`}>Word Order</Label>
-                                        <Select
-                                          value={param.wordOrder}
-                                          onValueChange={(value) =>
-                                            updateParameter(device.id, param.id, "wordOrder", value)
-                                          }
-                                        >
-                                          <SelectTrigger id={`wordOrder-${param.id}`}>
-                                            <SelectValue placeholder="Select word order" />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                            <SelectItem value="big">Big Endian</SelectItem>
-                                            <SelectItem value="little">Little Endian</SelectItem>
-                                          </SelectContent>
-                                        </Select>
-                                      </div>
-                                    </>
-                                  )}
-
-                                  <div className="space-y-2">
-                                    <Label htmlFor={`scaleFactor-${param.id}`}>Scale Factor</Label>
-                                    <Input
-                                      id={`scaleFactor-${param.id}`}
-                                      type="number"
-                                      step="any"
-                                      value={param.scaleFactor}
-                                      onChange={(e) =>
-                                        updateParameter(device.id, param.id, "scaleFactor", e.target.value)
-                                      }
-                                      placeholder="1"
-                                    />
-                                  </div>
-                                  <div className="space-y-2">
-                                    <Label htmlFor={`offset-${param.id}`}>Offset</Label>
-                                    <Input
-                                      id={`offset-${param.id}`}
-                                      type="number"
-                                      step="any"
-                                      value={param.offset}
-                                      onChange={(e) => updateParameter(device.id, param.id, "offset", e.target.value)}
-                                      placeholder="0"
-                                    />
-                                  </div>
-                                  <div className="space-y-2">
-                                    <Label htmlFor={`decimalPlaces-${param.id}`}>Decimal Places</Label>
-                                    <Input
-                                      id={`decimalPlaces-${param.id}`}
-                                      type="number"
-                                      min="0"
-                                      max="10"
-                                      value={param.decimalPlaces}
-                                      onChange={(e) =>
-                                        updateParameter(device.id, param.id, "decimalPlaces", e.target.value)
-                                      }
-                                      placeholder="0"
-                                    />
-                                  </div>
+                              {/* Rows */}
+                              {readParams.length > 0 ? (
+                                readParams.map((param) => (
+                                  <ParameterRow 
+                                    key={param.id} 
+                                    deviceId={device.id}
+                                    param={param}
+                                    onUpdate={updateParameter}
+                                    onRemove={removeParameter}
+                                    canRemove={readParams.length > 1 || writeParams.length > 0}
+                                  />
+                                ))
+                              ) : (
+                                <div className="text-center py-4 text-sm text-muted-foreground">
+                                  No read parameters configured
                                 </div>
-                              </div>
-
-                              {/* Display Configuration */}
-                              <div>
-                                <h5 className="text-sm font-medium mb-3 text-muted-foreground">
-                                  Display Configuration
-                                </h5>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  <div className="space-y-2">
-                                    <Label htmlFor={`unit-${param.id}`}>Unit</Label>
-                                    <Input
-                                      id={`unit-${param.id}`}
-                                      value={param.unit}
-                                      onChange={(e) => updateParameter(device.id, param.id, "unit", e.target.value)}
-                                      placeholder="e.g., kW, V, A"
-                                    />
-                                  </div>
-                                  <div className="space-y-2">
-                                    <Label htmlFor={`description-${param.id}`}>Description</Label>
-                                    <Textarea
-                                      id={`description-${param.id}`}
-                                      value={param.description}
-                                      onChange={(e) =>
-                                        updateParameter(device.id, param.id, "description", e.target.value)
-                                      }
-                                      placeholder="e.g., PV Power in kW"
-                                      rows={2}
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Remove Parameter Button */}
-                              <div className="flex justify-end pt-2 border-t">
-                                <Button
-                                  variant="destructive"
-                                  size="sm"
-                                  onClick={() => removeParameter(device.id, param.id)}
-                                  disabled={device.parameters.length <= 1}
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Remove Parameter
+                              )}
+                              <div className="mt-3">
+                                <Button onClick={() => addParameter(device.id, "read")} variant="outline" size="sm">
+                                  <Plus className="h-3 w-3 mr-2" />
+                                  Add Read Parameter
                                 </Button>
                               </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </CardContent>
-                  </Card>
-                </AccordionContent>
-              </AccordionItem>
-            ))}
+                            </CardContent>
+                          </Card>
+                        </TabsContent>
+
+                        <TabsContent value="write" className="mt-0">
+                          <Card>
+                            <CardContent className="p-3">
+                              {/* Header */}
+                              <div className="grid grid-cols-12 gap-2 pb-2 mb-2 border-b font-medium text-xs text-muted-foreground">
+                                <div className="col-span-2">Name</div>
+                                <div className="col-span-1">Type</div>
+                                <div className="col-span-1">Addr</div>
+                                <div className="col-span-1">ID</div>
+                                <div className="col-span-1">Data</div>
+                                <div className="col-span-2">Scale</div>
+                                <div className="col-span-1">Offset</div>
+                                <div className="col-span-1">Dec</div>
+                                <div className="col-span-1">Unit</div>
+                                <div className="col-span-1"></div>
+                              </div>
+                              {/* Rows */}
+                              {writeParams.length > 0 ? (
+                                writeParams.map((param) => (
+                                  <ParameterRow 
+                                    key={param.id} 
+                                    deviceId={device.id}
+                                    param={param}
+                                    onUpdate={updateParameter}
+                                    onRemove={removeParameter}
+                                    canRemove={writeParams.length > 1 || readParams.length > 0}
+                                  />
+                                ))
+                              ) : (
+                                <div className="text-center py-4 text-sm text-muted-foreground">
+                                  No write parameters configured
+                                </div>
+                              )}
+                              <div className="mt-3">
+                                <Button onClick={() => addParameter(device.id, "write")} variant="outline" size="sm">
+                                  <Plus className="h-3 w-3 mr-2" />
+                                  Add Write Parameter
+                                </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </TabsContent>
+                      </Tabs>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              )
+            })}
           </Accordion>
         </CardContent>
-        <CardFooter>
-          <Button onClick={saveConfig} className="ml-auto" disabled={isSaving}>
-            {isSaving ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-            {isSaving ? "Saving..." : "Save Configuration"}
-          </Button>
-        </CardFooter>
       </Card>
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>Configuration Preview</CardTitle>
-          <CardDescription>Preview of the modbus.json file that will be generated</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <pre className="bg-muted p-4 rounded-md overflow-auto text-sm">{JSON.stringify(config, null, 2)}</pre>
-        </CardContent>
-      </Card>
+
+      {showPreview && (
+        <Card className="mt-4">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Configuration Preview</CardTitle>
+            <CardDescription>Preview of the modbus.json file</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <pre className="bg-muted p-3 rounded-md overflow-auto text-xs max-h-96">
+              {JSON.stringify(config, null, 2)}
+            </pre>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

@@ -1,7 +1,7 @@
 '''
 SPDX-License-Identifier: Apache-2.0
 
-Copyright 2025 Eaton
+Copyright 2026 Eaton
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,13 +18,18 @@ File: time_utils.py
 Description: # TODO: Add desc
 
 Created: 1st July 2025
-Last Modified: 30th October 2025
-Version: v1.0.0
+Last Modified: 3rd February 2026
+Version: v1.2.0
 '''
+
+
+from utils.logging_utils import setup_logging
+import logging
 
 # time related utility functions
 from datetime import datetime, timedelta
 
+logger = logging.getLogger('time_utils')
 
 def calculate_time_for_execution(
     interval_minutes: int, start_time: datetime = None, current_time: datetime = None
@@ -40,13 +45,13 @@ def calculate_time_for_execution(
     """
 
     if interval_minutes <= 0:
-        print(
+        logger.error(
             f"Time interval not invalid: {interval_minutes}; Set sleep time to 0 to trigger the next execution"
         )
         return 0  # no need to wait if interval <=0
 
     now = start_time if start_time is not None else datetime.now()
-    print(f"Reference start time for calcuting the next execution time: {start_time}")
+    logger.info(f"Reference start time for calcuting the next execution time: {start_time}")
 
     # Calculate the next execution time
     next_execution = (now + timedelta(minutes=interval_minutes)).replace(
@@ -55,13 +60,13 @@ def calculate_time_for_execution(
     next_execution = next_execution - timedelta(
         minutes=next_execution.minute % interval_minutes
     )
-    print(f"Next execution time: {next_execution}")
+    logger.info(f"Next execution time: {next_execution}")
 
     current_time = current_time if current_time else datetime.now()
-    print(f"Current system time is {current_time}")
+    logger.info(f"Current system time is {current_time}")
     # Wait until the next execution time
     sleep_time = (next_execution - current_time).total_seconds()
     if sleep_time < 0:
         sleep_time = 0
-    print(f"Sleep time: {sleep_time}")
+    logger.info(f"Sleep time: {sleep_time}")
     return sleep_time

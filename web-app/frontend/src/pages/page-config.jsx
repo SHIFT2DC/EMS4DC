@@ -1,7 +1,7 @@
 /*
 SPDX-License-Identifier: Apache-2.0
 
-Copyright 2025 Eaton
+Copyright 2026 Eaton
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,8 +18,8 @@ File: page-config.jsx
 Description: # TODO: Add desc
 
 Created: 1st January 2025
-Last Modified: 30th October 2025
-Version: v1.0.0
+Last Modified: 3rd February 2026
+Version: v1.2.0
 */
 
 import { useState, useEffect } from "react"
@@ -28,15 +28,18 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 const defaultConfig = {
+  generalSiteConfig: {
+    selectedOperationMode: "droopMode"
+  },
   evCharger1: {
     maxVoltage: 400,
     minVoltage: 200,
     maxCurrent: 32,
     minCurrent: 6,
     maxPower: 22000,
-    // Add default droop curve parameters
     v_nom: 300,
     p_supply: 22000,
     v_supply: 100,
@@ -51,7 +54,6 @@ const defaultConfig = {
     maxCurrent: 32,
     minCurrent: 6,
     maxPower: 22000,
-    // Add default droop curve parameters
     v_nom: 300,
     p_supply: 22000,
     v_supply: 100,
@@ -129,7 +131,6 @@ const ConfigPage = () => {
       const response = await fetch(`${API_BASE_URL}/api/config`)
 
       const data = await response.json()
-      // If the loaded config is empty or invalid, use the default config
       if (data && Object.keys(data).length > 0) {
         setConfig(data)
       } else {
@@ -172,7 +173,6 @@ const ConfigPage = () => {
     }))
   }
 
-  // Helper function to get appropriate unit for parameter
   const getParameterUnit = (param) => {
     if (param.toLowerCase().includes("voltage") || param.toLowerCase().includes("v_")) {
       return "V"
@@ -192,15 +192,13 @@ const ConfigPage = () => {
     return ""
   }
 
-  // Helper function to format parameter names for display
   const formatParameterName = (param) => {
     const specialCases = {
-      v_nom: "Nominal Voltage",
-      p_supply: "Supply Power",
-      v_supply: "Supply Voltage Drop",
-      p_consume: "Consume Power",
-      v_consume: "Consume Voltage Drop",
-      p_opt: "Optimal Power",
+      nominalVoltageDCBus: "Nominal Voltage on the DC Bus",
+      droopVoltageUpperLimit: "Droop: Voltage Upper Limit",
+      droopVoltageLowerLimit: "Droop Voltage Lower Limit",
+      droopPowerSupplyLimit: "Droop Power Supply Limit",
+      droopPowerConsumeLimit: "Droop Power Consume Limit",
       nominalPower: "Nominal Power",
       maxVoltage: "Maximum Voltage",
       minVoltage: "Minimum Voltage",
@@ -212,10 +210,19 @@ const ConfigPage = () => {
       operatingFrequency: "Operating Frequency",
       efficiency: "Efficiency",
       minSoC: "Minimum State of Charge",
-      maxSoC: "Maximum State of Charge"
+      maxSoC: "Maximum State of Charge",
+      selectedOperationMode: "Selected mode of EMS Operation"
     }
     
     return specialCases[param] || param.replace(/([A-Z])/g, " $1").trim()
+  }
+
+  const formatOperationModeValue = (value) => {
+    const modeLabels = {
+      droopMode: "Droop Mode",
+      optimizerMode: "Optimizer Mode"
+    }
+    return modeLabels[value] || value
   }
 
   const renderDeviceConfig = (device, params, displayName) => (
@@ -227,19 +234,34 @@ const ConfigPage = () => {
             Object.entries(params).map(([param, value]) => (
               <div key={param} className="space-y-2">
                 <Label htmlFor={`${device}-${param}`}>{formatParameterName(param)}</Label>
-                <div className="flex items-center space-x-2">
-                  <Input
-                    id={`${device}-${param}`}
-                    type="number"
+                {param === "selectedOperationMode" ? (
+                  <Select
                     value={value}
-                    onChange={(e) => handleChange(device, param, Number(e.target.value))}
-                    className="w-full"
-                    step={param.toLowerCase().includes("efficiency") ? "0.1" : "1"}
-                  />
-                  <span className="text-sm text-muted-foreground min-w-[30px]">
-                    {getParameterUnit(param)}
-                  </span>
-                </div>
+                    onValueChange={(newValue) => handleChange(device, param, newValue)}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select operation mode" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="droopMode">Droop Mode</SelectItem>
+                      <SelectItem value="optimizerMode">Optimizer Mode</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="flex items-center space-x-2">
+                    <Input
+                      id={`${device}-${param}`}
+                      type="number"
+                      value={value}
+                      onChange={(e) => handleChange(device, param, Number(e.target.value))}
+                      className="w-full"
+                      step={param.toLowerCase().includes("efficiency") ? "0.1" : "1"}
+                    />
+                    <span className="text-sm text-muted-foreground min-w-[30px]">
+                      {getParameterUnit(param)}
+                    </span>
+                  </div>
+                )}
               </div>
             ))
           ) : (
@@ -258,6 +280,7 @@ const ConfigPage = () => {
       </CardHeader>
       <CardContent>
         <Accordion type="single" collapsible className="w-full">
+          {renderDeviceConfig("generalSiteConfig", config.generalSiteConfig, "General Site Configuration")}
           {renderDeviceConfig("evCharger1", config.evCharger1, "EV Charger 1")}
           {renderDeviceConfig("evCharger2", config.evCharger2, "EV Charger 2")}
           {renderDeviceConfig("pv", config.pv, "Solar PV")}

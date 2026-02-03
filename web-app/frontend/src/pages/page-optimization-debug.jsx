@@ -1,7 +1,7 @@
 /*
 SPDX-License-Identifier: Apache-2.0
 
-Copyright 2025 Eaton
+Copyright 2026 Eaton
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,8 +18,8 @@ File: page-optimization-debug.jsx
 Description: # TODO: Add desc
 
 Created: 1st January 2025
-Last Modified: 30th October 2025
-Version: v1.0.0
+Last Modified: 3rd February 2026
+Version: v1.2.0
 */
 
 import { useState, useEffect } from "react"
@@ -40,7 +40,7 @@ export default function EMSDebugPage() {
     setLoading(true)
     try {
         const API_BASE_URL = import.meta.env.VITE_BASE_URL || "http://localhost:3001"
-        const [inputsRes, outputsRes] = await Promise.all([fetch(`${API_BASE_URL}/api/ems-inputs`), fetch(`${API_BASE_URL}/api/ems-outputs`)])
+        const [inputsRes, outputsRes] = await Promise.all([fetch(`${API_BASE_URL}/api/ems-debug/ems-inputs`), fetch(`${API_BASE_URL}/api/ems-debug/ems-outputs`)])
 
       if (inputsRes.ok && outputsRes.ok) {
         const inputsData = await inputsRes.json()

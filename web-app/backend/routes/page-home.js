@@ -1,7 +1,7 @@
 /*
 SPDX-License-Identifier: Apache-2.0
 
-Copyright 2025 Eaton
+Copyright 2026 Eaton
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ File: page-home.js
 Description: # TODO: Add desc
 
 Created: 24th November 2025
-Last Modified: 24th November 2025
+Last Modified: 3rd February 2026
 Version: v1.2.0
 */
 
@@ -37,13 +37,15 @@ const router = express.Router();
 
 // Endpoint to receive data for home page
 router.get('/', (req, res) => {
-  const modbusReaderPath = path.join(__dirname, '../../../system-coordination/fetchMeasurements.py');
-  const configPath = path.join(__dirname, '../modbus.json');
+  // System coordination path:
+  const systemCoordPath = path.join(__dirname, '../../../system-coordination');
+  const modbusConfigPath = path.join(__dirname, '../modbus.json');
   
   // Path to the Python interpreter in the virtual environment (Windows)
   const venvPythonPath = path.join(__dirname, '../../../system-coordination/sys-coord/Scripts/python.exe');
   
-  execFile(venvPythonPath, [modbusReaderPath, configPath], (error, stdout, stderr) => {
+  execFile(venvPythonPath, ['-m', 'data.measurements_client', modbusConfigPath], {cwd: systemCoordPath}, 
+    (error, stdout, stderr) => {
     if (error) {
       console.error(`exec error: ${error}`);
       return res.status(500).json({ error: 'An error occurred while executing the Python script' });

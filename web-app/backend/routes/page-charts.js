@@ -1,7 +1,7 @@
 /*
 SPDX-License-Identifier: Apache-2.0
 
-Copyright 2025 Eaton
+Copyright 2026 Eaton
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ File: page-charts.js
 Description: # TODO: Add desc
 
 Created: 24th November 2025
-Last Modified: 24th November 2025
+Last Modified: 3rd February 2026
 Version: v1.2.0
 */
 
@@ -53,7 +53,7 @@ router.get("/", async (req, res) => {
       GROUP BY EXTRACT(HOUR FROM "time"), "measurement_id"
       ORDER BY hour, "measurement_id";
       `,
-      [date, [1, 2, 3, 4, 14, 25]]
+      [date, [1, 10, 12, 23, 22, 28]]
     );
 
     client.release();
@@ -61,11 +61,11 @@ router.get("/", async (req, res) => {
     // Map data into a structure suitable for the frontend
     const keyTagRules = {
       1: { title: "PV Power" },
-      2: { title: "Battery Power" },
-      3: { title: "Active Front End Power" },
-      4: { title: "Unidirectional Charger"},
-      14: { title: "Load Power" },
-      25: { title: "Bidirectional EV Charger"}
+      10: { title: "Battery Power" },
+      12: { title: "Active Front End Power" },
+      23: { title: "Unidirectional Charger"},
+      22: { title: "Load Power" },
+      28: { title: "Bidirectional EV Charger"}
     };
 
     const chartData = {};

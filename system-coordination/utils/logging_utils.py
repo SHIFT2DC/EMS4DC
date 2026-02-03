@@ -1,4 +1,4 @@
-/*
+'''
 SPDX-License-Identifier: Apache-2.0
 
 Copyright 2026 Eaton
@@ -14,25 +14,20 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 
-File: pool.js
+File: logging_utils.py
 Description: # TODO: Add desc
 
-Created: 24th November 2025
+Created: 3rd February 2026
 Last Modified: 3rd February 2026
 Version: v1.2.0
-*/
+'''
 
-import pg from "../../frontend/node_modules/pg/lib/index.js";
-import dotenv from "../../frontend/node_modules/dotenv/lib/main.js";
 
-dotenv.config();
+import logging
 
-const { Pool } = pg;
-
-export const pool = new Pool({
-  user: process.env.DB_USER,
-  host: process.env.DB_HOST,
-  database: process.env.DB_NAME,
-  password: process.env.DB_PASSWORD,
-  port: process.env.DB_PORT,
-});
+def setup_logging():
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
+        handlers=[logging.StreamHandler()]
+    )

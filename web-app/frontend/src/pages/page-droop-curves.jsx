@@ -1,7 +1,7 @@
 /*
 SPDX-License-Identifier: Apache-2.0
 
-Copyright 2025 Eaton
+Copyright 2026 Eaton
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,431 +18,222 @@ File: page-droop-curves.jsx
 Description: # TODO: Add desc
 
 Created: 1st January 2025
-Last Modified: 30th October 2025
-Version: v1.0.0
+Last Modified: 3rd February 2026
+Version: v1.2.0
 */
 
-import "chart.js/auto"
 import { useEffect, useState } from "react"
 import { Line } from "react-chartjs-2"
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from 'chart.js'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { AlertCircle, Save, Lock } from "lucide-react"
+import { Save, RefreshCw, AlertCircle } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend)
+
 const BASE_URL = import.meta.env.VITE_BASE_URL || "http://localhost:3001"
-const API_URL = `${BASE_URL}/api`
+const API_URL = `${BASE_URL}/api/droop-curve`
 
-// Color palette
-const deviceColors = {
-  pv: { border: "#3B82F6", background: "rgba(59, 130, 246, 0.1)" },
-  bess: { border: "#10B981", background: "rgba(16, 185, 129, 0.1)" },
-  evCharger1: { border: "#8B5CF6", background: "rgba(139, 92, 246, 0.1)" },
-  evCharger2: { border: "#f65c5cff", background: "rgba(139, 92, 246, 0.1)" },
-  loads: { border: "#F59E0B", background: "rgba(245, 158, 11, 0.1)" },
+// LUT DEFINITIONS - Define how to build LUT tables for each device
+const LUT_DEFINITIONS = {
+  AFE: {
+    axes: {
+      x: { label: "Power", unit: "W" },
+      y: { label: "Voltage", unit: "V" }
+    },
+    // Function that takes modbus data and returns LUT points
+    buildLUT: (modbusData) => {
+      const FW_VOLT_OFST = modbusData.AFE_FW_VOLT_OFST || 0
+      const FW_VOLT_DELTA = modbusData.AFE_FW_VOLT_DELTA || 0
+      const FW_P_MAX = modbusData.AFE_FW_P_MAX || 0
+      const RE_VOLT_OFST = modbusData.AFE_RE_VOLT_OFST || 0
+      const RE_VOLT_DELTA = modbusData.AFE_RE_VOLT_DELTA || 0
+      const RE_P_MAX = modbusData.AFE_RE_P_MAX || 0
+      const VOLT_OFST = modbusData.AFE_VOLT_OFST || 0
+      
+      return [
+        {
+          index: 0,
+          x: -FW_P_MAX,
+          y: 700 + VOLT_OFST - FW_VOLT_OFST - FW_VOLT_DELTA,
+          x_param: "-1 * FW_P_MAX",
+          y_param: "700 + VOLT_OFST - FW_VOLT_OFST - FW_VOLT_DELTA"
+        },
+        {
+          index: 1,
+          x: 0,
+          y: 700 + VOLT_OFST - FW_VOLT_OFST,
+          x_param: "0",
+          y_param: "700 + VOLT_OFST - FW_VOLT_OFST"
+        },
+        {
+          index: 2,
+          x: 0,
+          y: 700 + VOLT_OFST + RE_VOLT_OFST,
+          x_param: "0",
+          y_param: "700 + VOLT_OFST + RE_VOLT_OFST"
+        },
+        {
+          index: 3,
+          x: RE_P_MAX,
+          y: 700 + VOLT_OFST + RE_VOLT_OFST + RE_VOLT_DELTA,
+          x_param: "RE_P_MAX",
+          y_param: "700 + VOLT_OFST + RE_VOLT_OFST + RE_VOLT_DELTA"
+        }
+      ]
+    },
+    // Parameters needed from modbus
+    requiredParams: ["FW_VOLT_OFST", "FW_VOLT_DELTA", "FW_P_MAX", "RE_VOLT_OFST", "RE_VOLT_DELTA", "RE_P_MAX", "VOLT_OFST"]
+  },
+  
+  PV: {
+    axes: {
+      x: { label: "Power", unit: "W" },
+      y: { label: "Voltage", unit: "V" }
+    },
+    buildLUT: (modbusData) => {
+      const V_NOM = modbusData.PV_V_NOM || 700
+      const P_MAX = modbusData.PV_P_MAX || 40000
+      const V_DROOP = modbusData.PV_V_DROOP || 35
+      
+      return [
+        {
+          index: 0,
+          x: -P_MAX,
+          y: V_NOM + V_DROOP,
+          x_param: "PV_P_MAX (negated)",
+          y_param: "PV_V_NOM + PV_V_DROOP"
+        },
+        {
+          index: 1,
+          x: 0,
+          y: V_NOM,
+          x_param: "0",
+          y_param: "PV_V_NOM"
+        },
+        {
+          index: 2,
+          x: P_MAX,
+          y: V_NOM - V_DROOP,
+          x_param: "PV_P_MAX",
+          y_param: "PV_V_NOM - PV_V_DROOP"
+        }
+      ]
+    },
+    requiredParams: ["V_NOM", "P_MAX", "V_DROOP"]
+  },
+  
+  BESS: {
+    axes: {
+      x: { label: "Power", unit: "W" },
+      y: { label: "Voltage", unit: "V" }
+    },
+    buildLUT: (modbusData) => {
+      const CHARGE_P = modbusData.BESS_CHARGE_P || 0
+      const DISCHARGE_P = modbusData.BESS_DISCHARGE_P || 0
+      const SOC_0_CHAR_V = modbusData.BESS_SOC_0_CHAR_V || 0
+      const SOC_0_DISCH_V = modbusData.BESS_SOC_0_DISCH_V || 0
+      const SOC_100_CHAR_V = modbusData.BESS_SOC_100_CHAR_V || 0
+      const SOC_100_DISCH_V = modbusData.BESS_SOC_100_DISCH_V || 0
+      const CONV_OFST = modbusData.BESS_CONV_OFST || 0
+      
+      return [
+        {
+          index: 0,
+          x: CHARGE_P,
+          y: SOC_0_CHAR_V + 25,
+          x_param: "BESS_CHARGE_P",
+          y_param: "BESS_SOC_0_CHAR_V + 25"
+        },
+        {
+          index: 1,
+          x: 0,
+          y: SOC_0_CHAR_V,
+          x_param: "0",
+          y_param: "BESS_SOC_0_CHAR_V"
+        },
+        {
+          index: 2,
+          x: 0,
+          y: SOC_0_DISCH_V,
+          x_param: "0",
+          y_param: "BESS_SOC_0_DISCH_V"
+        },
+        {
+          index: 3,
+          x: -DISCHARGE_P,
+          y: SOC_0_DISCH_V - 25,
+          x_param: "-BESS_DISCHARGE_P (negated)",
+          y_param: "BESS_SOC_0_DISCH_V - 25"
+        },
+      ]
+    },
+    requiredParams: ["CHARGE_P", "DISCHARGE_P", "SOC_0_CHAR_V", "SOC_0_DISCH_V", "SOC_100_CHAR_V", "SOC_100_DISCH_V", "CONV_OFST"]
+  }
 }
 
-// Function to generate droop curve points from parameters
-const generateDroopCurvePoints = (parameters) => {
-  const { v_nom, p_supply, v_supply, p_consume, v_consume, p_opt = 0 } = parameters
-
-  // Calculate the three key points for the droop curve
-  const upperPoint = [-p_consume, v_nom + v_consume]
-  const middlePoint = [p_opt, v_nom]
-  const lowerPoint = [p_supply, v_nom - v_supply]
-
-  return [
-    { x: upperPoint[0], y: upperPoint[1] },
-    { x: middlePoint[0], y: middlePoint[1] },
-    { x: lowerPoint[0], y: lowerPoint[1] },
-  ]
-}
-
-const DroopCurveChart = ({ device, parameters, colorSet }) => {
-  const chartPoints = generateDroopCurvePoints(parameters)
-
-  // Calculate appropriate axis limits based on parameters
-  const margin = Math.max(parameters.p_consume, parameters.p_supply) * 1.1
-  const v_margin = Math.max(parameters.v_supply, parameters.v_consume) * 0.1
-
-  const axisLimits = {
-    xMin: -Math.max(parameters.p_consume, margin),
-    xMax: Math.max(parameters.p_supply, margin),
-    yMin: parameters.v_nom - parameters.v_supply - v_margin,
-    yMax: parameters.v_nom + parameters.v_consume + v_margin,
-  }
-
-  return (
-    <div className="h-64 md:h-80 relative">
-      <Line
-        data={{
-          datasets: [
-            {
-              label: `${device} Droop Curve`,
-              data: chartPoints,
-              borderColor: colorSet.border,
-              backgroundColor: colorSet.background,
-              pointBackgroundColor: colorSet.border,
-              pointBorderColor: "#fff",
-              pointBorderWidth: 1,
-              pointRadius: 5,
-              pointHoverRadius: 7,
-              showLine: true,
-              tension: 0
-            },
-            // Add annotations for v_nom horizontal line
-            {
-              label: "v_nom",
-              data: [
-                { x: axisLimits.xMin, y: parameters.v_nom },
-                { x: axisLimits.xMax, y: parameters.v_nom },
-              ],
-              borderColor: "rgba(0,0,0,0.3)",
-              borderWidth: 1,
-              borderDash: [5, 5],
-              pointRadius: 0,
-              fill: false,
-            },
-            // Add annotations for power=0 vertical line
-            {
-              label: "Power = 0",
-              data: [
-                { x: 0, y: axisLimits.yMin },
-                { x: 0, y: axisLimits.yMax },
-              ],
-              borderColor: "rgba(0,0,0,0.3)",
-              borderWidth: 1,
-              borderDash: [5, 5],
-              pointRadius: 0,
-              fill: false,
-            },
-          ],
-        }}
-        options={{
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            x: {
-              type: "linear",
-              position: "bottom",
-              title: { display: true, text: "Power (W)", font: { weight: "normal" } },
-              grid: { color: "rgba(0,0,0,0.05)" },
-              min: axisLimits.xMin,
-              max: axisLimits.xMax,
-              ticks: {
-                callback: (value) => {
-                  if (value === 0) return "0"
-                  if (value === parameters.p_supply) return `p_supply`
-                  if (value === -parameters.p_consume) return `p_consume`
-                  return value
-                },
-              },
-            },
-            y: {
-              type: "linear",
-              title: { display: true, text: "Voltage (V)", font: { weight: "normal" } },
-              grid: { color: "rgba(0,0,0,0.05)" },
-              min: axisLimits.yMin,
-              max: axisLimits.yMax,
-              ticks: {
-                callback: (value) => {
-                  if (value === parameters.v_nom) return `v_nom`
-                  if (value === parameters.v_nom + parameters.v_consume) return `v_nom+v_consume`
-                  if (value === parameters.v_nom - parameters.v_supply) return `v_nom-v_supply`
-                  return value
-                },
-              },
-            },
-          },
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              backgroundColor: "rgba(0,0,0,0.7)",
-              padding: 10,
-              cornerRadius: 6,
-              titleFont: { size: 14 },
-              bodyFont: { size: 13 },
-              callbacks: {
-                label: (context) => {
-                  const point = context.raw
-                  return `P: ${point.x.toFixed(1)}, V: ${point.y.toFixed(1)}`
-                },
-              },
-            },
-          },
-        }}
-      />
-    </div>
-  )
-}
-
-const DroopCurveForm = ({ device, parameters, setParameters, onSave }) => {
-  const [formValues, setFormValues] = useState({ ...parameters })
-
-  useEffect(() => {
-    setFormValues({ ...parameters })
-  }, [parameters])
-
-  const handleChange = (e) => {
-    const { name, value } = e.target
-    setFormValues({
-      ...formValues,
-      [name]: Number.parseFloat(value) || 0,
-    })
-  }
-
-  const handleSubmit = () => {
-    // Keep the existing p_opt value from parameters (set by Python module)
-    const updatedParams = {
-      ...formValues,
-      p_opt: parameters.p_opt, // Preserve p_opt from Python module
-    }
-    setParameters(updatedParams)
-    onSave(updatedParams)
-  }
-
-  return (
-    <div className="space-y-4 mt-4">
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
-        <div>
-          <Label htmlFor={`${device}-v_nom`} className="text-sm font-medium">
-            v_nom
-          </Label>
-          <Input
-            id={`${device}-v_nom`}
-            name="v_nom"
-            type="number"
-            value={formValues.v_nom}
-            onChange={handleChange}
-            className="mt-1"
-            min="0"
-            step="1"
-          />
-        </div>
-        <div>
-          <Label htmlFor={`${device}-p_supply`} className="text-sm font-medium">
-            p_supply
-          </Label>
-          <Input
-            id={`${device}-p_supply`}
-            name="p_supply"
-            type="number"
-            value={formValues.p_supply}
-            onChange={handleChange}
-            className="mt-1"
-            min="0"
-            step="1000"
-          />
-        </div>
-        <div>
-          <Label htmlFor={`${device}-v_supply`} className="text-sm font-medium">
-            v_supply
-          </Label>
-          <Input
-            id={`${device}-v_supply`}
-            name="v_supply"
-            type="number"
-            value={formValues.v_supply}
-            onChange={handleChange}
-            className="mt-1"
-            min="0"
-            step="1"
-          />
-        </div>
-        <div>
-          <Label htmlFor={`${device}-p_consume`} className="text-sm font-medium">
-            p_consume
-          </Label>
-          <Input
-            id={`${device}-p_consume`}
-            name="p_consume"
-            type="number"
-            value={formValues.p_consume}
-            onChange={handleChange}
-            className="mt-1"
-            min="0"
-            step="1000"
-          />
-        </div>
-        <div>
-          <Label htmlFor={`${device}-v_consume`} className="text-sm font-medium">
-            v_consume
-          </Label>
-          <Input
-            id={`${device}-v_consume`}
-            name="v_consume"
-            type="number"
-            value={formValues.v_consume}
-            onChange={handleChange}
-            className="mt-1"
-            min="0"
-            step="1"
-          />
-        </div>
-      </div>
-
-      {/* Display p_opt as read-only information */}
-      <div className="bg-gray-50 p-3 rounded-lg border">
-        <div className="flex items-center gap-2 mb-2">
-          <Lock className="w-4 h-4 text-gray-500" />
-          <Label className="text-sm font-medium text-gray-700">
-            p_opt (Set by EMS Optimization)
-          </Label>
-        </div>
-        <div className="text-lg font-mono text-gray-800">
-          {parameters.p_opt !== undefined ? `${parameters.p_opt} W` : 'Not set'}
-        </div>
-        <div className="text-xs text-gray-500 mt-1">
-          This value is automatically updated by the EMS optimization module
-        </div>
-      </div>
-
-      <div className="flex justify-end">
-        <Button onClick={handleSubmit} className="bg-blue-600 hover:bg-blue-700">
-          <Save className="w-4 h-4 mr-2" />
-          Save Changes
-        </Button>
-      </div>
-    </div>
-  )
-}
-
-const DroopCurvePanel = ({ device, deviceConfig, onSave }) => {
-  // Extract droop parameters from device config
-  const [parameters, setParameters] = useState({
-    v_nom: deviceConfig.v_nom || 700,
-    p_supply: deviceConfig.p_supply || 40000,
-    v_supply: deviceConfig.v_supply || 35,
-    p_consume: deviceConfig.p_consume || 40000,
-    v_consume: deviceConfig.v_consume || 35,
-    p_opt: deviceConfig.p_opt || 0,
-  })
-
-  const colorSet = deviceColors[device] || {
-    border: "#6B7280",
-    background: "rgba(107, 114, 128, 0.1)",
-  }
-
-  useEffect(() => {
-    // Update parameters when deviceConfig changes
-    setParameters({
-      v_nom: deviceConfig.v_nom || 700,
-      p_supply: deviceConfig.p_supply || 40000,
-      v_supply: deviceConfig.v_supply || 35,
-      p_consume: deviceConfig.p_consume || 40000,
-      v_consume: deviceConfig.v_consume || 35,
-      p_opt: deviceConfig.p_opt || 0,
-    })
-  }, [deviceConfig])
-
-  const handleSave = (newParameters) => {
-    // Save the parameters directly to the config
-    const updatedConfig = {
-      ...deviceConfig,
-      v_nom: newParameters.v_nom,
-      p_supply: newParameters.p_supply,
-      v_supply: newParameters.v_supply,
-      p_consume: newParameters.p_consume,
-      v_consume: newParameters.v_consume,
-      p_opt: newParameters.p_opt, // This will be preserved from the Python module
-    }
-    onSave(updatedConfig)
-  }
-
-  return (
-    <Card className="mb-6 shadow-sm hover:shadow-md transition-shadow duration-300">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-medium capitalize">{device} Droop Curve</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <DroopCurveChart device={device} parameters={parameters} colorSet={colorSet} />
-        <DroopCurveForm device={device} parameters={parameters} setParameters={setParameters} onSave={handleSave} />
-      </CardContent>
-    </Card>
-  )
-}
-
-const DroopCurves = () => {
-  const [config, setConfig] = useState(null)
-  const [loading, setLoading] = useState(true)
+const DroopCurveLUT = () => {
+  const [devices, setDevices] = useState([])
+  const [activeDevice, setActiveDevice] = useState(null)
+  const [modbusData, setModbusData] = useState(null)
+  const [curveData, setCurveData] = useState(null)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [activeTab, setActiveTab] = useState("pv")
 
   useEffect(() => {
-    fetchConfig()
-    // Set up polling to refresh config every 30 seconds to get updated p_opt values
-    const interval = setInterval(fetchConfig, 30000)
-    return () => clearInterval(interval)
+    // Get available devices from LUT definitions
+    const availableDevices = Object.keys(LUT_DEFINITIONS)
+    setDevices(availableDevices)
+    if (availableDevices.length > 0) {
+      setActiveDevice(availableDevices[0])
+    }
   }, [])
 
-  const fetchConfig = async () => {
+  useEffect(() => {
+    if (activeDevice) {
+      fetchDroopLUT(activeDevice)
+    }
+  }, [activeDevice])
+
+  const fetchDroopLUT = async (deviceName) => {
     setLoading(true)
     setError(null)
     try {
-      const response = await fetch(`${API_URL}/config`)
-      if (!response.ok) {
-        throw new Error(`Failed to fetch config: ${response.status}`)
-      }
+      // Fetch all modbus data
+      const response = await fetch(`${API_URL}/modbus-data`)
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
       const data = await response.json()
-      setConfig(data)
-    } catch (err) {
-      console.error("Error fetching config:", err)
-      setError("Failed to load configuration. Please try again.")
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const saveConfig = async (updatedConfig) => {
-    setLoading(true)
-    setError(null)
-    try {
-      const response = await fetch(`${API_URL}/config`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updatedConfig),
-      })
-
-      if (!response.ok) {
-        throw new Error(`Failed to save config: ${response.status}`)
+      
+      setModbusData(data)
+      
+      // Build LUT using the device's definition
+      const lutDef = LUT_DEFINITIONS[deviceName]
+      if (!lutDef) {
+        throw new Error(`No LUT definition for device ${deviceName}`)
       }
-
-      setConfig(updatedConfig)
+      
+      const points = lutDef.buildLUT(data)
+      
+      setCurveData({
+        device: deviceName,
+        axes: lutDef.axes,
+        points: points,
+        requiredParams: lutDef.requiredParams
+      })
     } catch (err) {
-      console.error("Error saving config:", err)
-      setError("Failed to save configuration. Please try again.")
+      setError(`Failed to load LUT for ${deviceName}: ${err.message}`)
+      console.error("Error fetching droop LUT:", err)
     } finally {
       setLoading(false)
     }
-  }
-
-  const handleDeviceConfigSave = (device, updatedDeviceConfig) => {
-    if (!config) return
-
-    const updatedConfig = {
-      ...config,
-      [device]: updatedDeviceConfig,
-    }
-
-    saveConfig(updatedConfig)
-  }
-
-  if (loading && !config) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <p className="text-lg text-gray-600">Loading droop curves...</p>
-        </div>
-      </div>
-    )
   }
 
   if (error) {
     return (
-      <Alert variant="destructive" className="max-w-2xl mx-auto my-8">
+      <Alert variant="destructive" className="m-6">
         <AlertCircle className="h-4 w-4" />
         <AlertTitle>Error</AlertTitle>
         <AlertDescription>{error}</AlertDescription>
@@ -450,77 +241,216 @@ const DroopCurves = () => {
     )
   }
 
-  if (!config) {
+  if (!curveData) {
     return (
-      <Alert className="max-w-2xl mx-auto my-8">
-        <AlertCircle className="h-4 w-4" />
-        <AlertTitle>No Configuration</AlertTitle>
-        <AlertDescription>No configuration data available.</AlertDescription>
-      </Alert>
+      <div className="p-8 text-center">
+        <div className="animate-pulse text-gray-500">Loading droop curves...</div>
+      </div>
     )
   }
 
+  const chartData = {
+    datasets: [{
+      label: `${activeDevice} Droop Curve`,
+      data: curveData.points.map(p => ({ x: p.x, y: p.y })),
+      borderColor: '#3B82F6',
+      backgroundColor: 'rgba(59, 130, 246, 0.1)',
+      showLine: true,
+      tension: 0,
+      pointRadius: 6,
+      pointHoverRadius: 8,
+      pointBackgroundColor: '#3B82F6',
+      pointBorderColor: '#fff',
+      pointBorderWidth: 2
+    }]
+  }
+
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    scales: {
+      x: {
+        type: 'linear',
+        title: {
+          display: true,
+          text: `${curveData.axes.x.label} (${curveData.axes.x.unit})`,
+          font: { size: 14, weight: 'bold' }
+        },
+        grid: { color: 'rgba(0,0,0,0.05)' }
+      },
+      y: {
+        type: 'linear',
+        title: {
+          display: true,
+          text: `${curveData.axes.y.label} (${curveData.axes.y.unit})`,
+          font: { size: 14, weight: 'bold' }
+        },
+        grid: { color: 'rgba(0,0,0,0.05)' }
+      }
+    },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: 'rgba(0,0,0,0.8)',
+        padding: 12,
+        callbacks: {
+          title: (items) => `Point ${items[0].dataIndex + 1}`,
+          label: (context) => {
+            const point = context.raw
+            const pointData = curveData.points[context.dataIndex]
+            return [
+              `${curveData.axes.x.label}: ${point.x.toFixed(2)} ${curveData.axes.x.unit}`,
+              `${curveData.axes.y.label}: ${point.y.toFixed(2)} ${curveData.axes.y.unit}`,
+              `Formula X: ${pointData.x_param}`,
+              `Formula Y: ${pointData.y_param}`
+            ]
+          }
+        }
+      }
+    }
+  }
+
   return (
-    <div className="space-y-8 py-4">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold">Droop Curve Configuration</h2>
-        <div className="text-right">
-          <p className="text-sm text-gray-500">Configure droop parameters</p>
-          <p className="text-xs text-gray-400">p_opt values are set by EMS optimization</p>
+    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold">Droop Curve Configuration</h1>
+          <p className="text-gray-500 mt-1">View device droop curves calculated from Modbus parameters</p>
         </div>
+        <Button 
+          onClick={() => fetchDroopLUT(activeDevice)}
+          variant="outline"
+          disabled={loading}
+          className="gap-2"
+        >
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
       </div>
 
-      <Tabs defaultValue="pv" value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="mb-6">
-          <TabsTrigger value="pv">PV</TabsTrigger>
-          <TabsTrigger value="bess">BESS</TabsTrigger>
-          <TabsTrigger value="evCharger1">Unidirectional EV Charger</TabsTrigger>
-          <TabsTrigger value="evCharger2">V2B EV Charger</TabsTrigger>
-          <TabsTrigger value="loads">Loads</TabsTrigger>
+      <Tabs value={activeDevice} onValueChange={setActiveDevice}>
+        <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid">
+          {devices.map(device => (
+            <TabsTrigger key={device} value={device}>
+              {device}
+            </TabsTrigger>
+          ))}
         </TabsList>
 
-        <TabsContent value="pv">
-          <DroopCurvePanel
-            device="pv"
-            deviceConfig={config.pv}
-            onSave={(updatedConfig) => handleDeviceConfigSave("pv", updatedConfig)}
-          />
-        </TabsContent>
+        {devices.map(device => (
+          <TabsContent key={device} value={device}>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span>{device} Droop Curve</span>
+                  <span className="text-sm font-normal text-gray-500">
+                    {curveData.points.length} points
+                  </span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Chart */}
+                <div className="h-96 bg-gray-50 rounded-lg p-4">
+                  <Line data={chartData} options={chartOptions} />
+                </div>
 
-        <TabsContent value="bess">
-          <DroopCurvePanel
-            device="bess"
-            deviceConfig={config.bess}
-            onSave={(updatedConfig) => handleDeviceConfigSave("bess", updatedConfig)}
-          />
-        </TabsContent>
+                {/* LUT Table */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-lg">Calculated Points</h3>
 
-        <TabsContent value="evCharger1">
-          <DroopCurvePanel
-            device="evCharger1"
-            deviceConfig={config.evCharger1}
-            onSave={(updatedConfig) => handleDeviceConfigSave("evCharger1", updatedConfig)}
-          />
-        </TabsContent>
+                  <div className="border rounded-lg overflow-hidden">
+                    <table className="w-full">
+                      <thead className="bg-gray-100 border-b">
+                        <tr>
+                          <th className="p-3 text-left font-semibold">#</th>
+                          <th className="p-3 text-left font-semibold">
+                            {curveData.axes.x.label} ({curveData.axes.x.unit})
+                          </th>
+                          <th className="p-3 text-left font-semibold">Formula</th>
+                          <th className="p-3 text-left font-semibold">
+                            {curveData.axes.y.label} ({curveData.axes.y.unit})
+                          </th>
+                          <th className="p-3 text-left font-semibold">Formula</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {curveData.points.map((point, idx) => (
+                          <tr 
+                            key={idx} 
+                            className={`border-b last:border-b-0 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
+                          >
+                            <td className="p-3 font-medium text-gray-600">{idx + 1}</td>
+                            <td className="p-3">
+                              <span className="font-mono text-lg font-semibold text-blue-600">
+                                {point.x.toFixed(2)}
+                              </span>
+                            </td>
+                            <td className="p-3">
+                              <code className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded">
+                                {point.x_param}
+                              </code>
+                            </td>
+                            <td className="p-3">
+                              <span className="font-mono text-lg font-semibold text-green-600">
+                                {point.y.toFixed(2)}
+                              </span>
+                            </td>
+                            <td className="p-3">
+                              <code className="text-xs bg-green-50 text-green-700 px-2 py-1 rounded">
+                                {point.y_param}
+                              </code>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
 
-        <TabsContent value="evCharger2">
-          <DroopCurvePanel
-            device="evCharger2"
-            deviceConfig={config.evCharger2}
-            onSave={(updatedConfig) => handleDeviceConfigSave("evCharger2", updatedConfig)}
-          />
-        </TabsContent>
+                  {/* Show required Modbus parameters */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h4 className="font-semibold text-blue-900 mb-2">Required Modbus Parameters</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {curveData.requiredParams.map(param => (
+                        <code key={param} className="text-sm bg-white text-blue-700 px-3 py-1 rounded border border-blue-300">
+                          {activeDevice}_{param}
+                        </code>
+                      ))}
+                    </div>
+                    <p className="text-sm text-blue-800 mt-3">
+                      <strong>Note:</strong> These parameters are read from Modbus and used to calculate the droop curve points above.
+                    </p>
+                  </div>
 
-        <TabsContent value="loads">
-          <DroopCurvePanel
-            device="loads"
-            deviceConfig={config.loads}
-            onSave={(updatedConfig) => handleDeviceConfigSave("loads", updatedConfig)}
-          />
-        </TabsContent>
+                  {/* Show raw modbus values */}
+                  {modbusData && (
+                    <details className="bg-gray-50 border rounded-lg p-4">
+                      <summary className="cursor-pointer font-semibold text-gray-700">
+                        Show Raw Modbus Values
+                      </summary>
+                      <div className="mt-3 space-y-1">
+                        {curveData.requiredParams.map(param => {
+                          const key = `${activeDevice}_${param}`
+                          const value = modbusData[key]
+                          return (
+                            <div key={param} className="flex justify-between font-mono text-sm">
+                              <span className="text-gray-600">{key}:</span>
+                              <span className="text-gray-900 font-semibold">
+                                {value !== undefined ? value : 'N/A'}
+                              </span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </details>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        ))}
       </Tabs>
     </div>
   )
 }
 
-export default DroopCurves
+export default DroopCurveLUT

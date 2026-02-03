@@ -1,7 +1,7 @@
 '''
 SPDX-License-Identifier: Apache-2.0
 
-Copyright 2025 Eaton
+Copyright 2026 Eaton
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,12 +14,12 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 
-File: fetchDatabase.py
+File: database_client.py
 Description: This script connects to PostgreSQL and queries average values for the most recent 15-minute interval, and also provides methods to get the most recent individual values.
 
 Created: 1st July 2025
-Last Modified: 30th October 2025
-Version: v1.0.0
+Last Modified: 3rd February 2026
+Version: v1.2.0
 '''
 
 
@@ -27,6 +27,9 @@ import psycopg2
 import pandas as pd
 from datetime import datetime
 import sys
+import logging
+from utils.logging_utils import setup_logging
+setup_logging
 
 
 class LastIntervalQuerier:
@@ -40,6 +43,7 @@ class LastIntervalQuerier:
             'port': port
         }
         self.connection = None
+        self.logger = logging.getLogger(__name__)
 
     def connect(self) -> bool:
         """Establish database connection."""
@@ -47,7 +51,7 @@ class LastIntervalQuerier:
             self.connection = psycopg2.connect(**self.connection_params)
             return True
         except psycopg2.Error as e:
-            print(f"Error connecting to database: {e}")
+            self.logger.error(f"Error connecting to database: {e}")
             return False
 
     def disconnect(self):
@@ -72,7 +76,7 @@ class LastIntervalQuerier:
             Returns empty DataFrame if data is too old or if no data found
         """
         if not self.connection:
-            print("No database connection. Connect first.")
+            self.logger.error("No database connection. Connect first.")
             return pd.DataFrame()
 
         query = f"""
@@ -109,7 +113,7 @@ class LastIntervalQuerier:
             df = pd.read_sql_query(query, self.connection)
             
             if df.empty:
-                print("No data found for the last 15-minute interval")
+                self.logger.error("No data found for the last 15-minute interval")
                 return pd.DataFrame()
             
             # Get the interval end time for freshness check
@@ -131,21 +135,21 @@ class LastIntervalQuerier:
             data_age = current_time - interval_end
             age_minutes = data_age.total_seconds() / 60
             
-            print(f"Last 15-minute interval: {interval_start} to {interval_end}")
-            print(f"Data age: {age_minutes:.1f} minutes")
+            self.logger.info(f"Last 15-minute interval: {interval_start} to {interval_end}")
+            self.logger.info(f"Data age: {age_minutes:.1f} minutes")
             
             # Check if data is fresh enough
             if age_minutes > max_age_minutes:
-                print(f"WARNING: Data is too old ({age_minutes:.1f} minutes > {max_age_minutes} minutes threshold)")
-                print("Returning empty DataFrame - consider checking your data fetching module")
+                self.logger.warning(f"WARNING: Data is too old ({age_minutes:.1f} minutes > {max_age_minutes} minutes threshold)")
+                self.logger.info("Returning empty DataFrame - consider checking your data fetching module")
                 return pd.DataFrame()
             
-            print(f"Data is fresh (within {max_age_minutes} minutes)")
-            print(f"Retrieved averages for {len(df)} parameters")
+            self.logger.info(f"Data is fresh (within {max_age_minutes} minutes)")
+            self.logger.info(f"Retrieved averages for {len(df)} parameters")
             return df
             
         except Exception as e:
-            print(f"Error executing query: {e}")
+            self.logger.error(f"Error executing query: {e}")
             return pd.DataFrame()
 
     def get_most_recent_values(self, table_name: str = "measurements",
@@ -167,7 +171,7 @@ class LastIntervalQuerier:
             Returns empty DataFrame if data is too old or if no data found
         """
         if not self.connection:
-            print("No database connection. Connect first.")
+            self.logger.error("No database connection. Connect first.")
             return pd.DataFrame()
 
         # Build parameter filter if specified
@@ -202,7 +206,7 @@ class LastIntervalQuerier:
             df = pd.read_sql_query(query, self.connection)
             
             if df.empty:
-                print("No recent data found")
+                self.logger.error("No recent data found")
                 return pd.DataFrame()
             
             # Get the most recent timestamp among the most recent values for freshness check
@@ -223,17 +227,17 @@ class LastIntervalQuerier:
             data_age = current_time - most_recent_time
             age_minutes = data_age.total_seconds() / 60
             
-            print(f"Most recent measurements time range: {df['measurement_time'].min()} to {df['measurement_time'].max()}")
-            print(f"Oldest recent data age: {age_minutes:.1f} minutes")
+            self.logger.info(f"Most recent measurements time range: {df['measurement_time'].min()} to {df['measurement_time'].max()}")
+            self.logger.info(f"Oldest recent data age: {age_minutes:.1f} minutes")
             
             # Check if data is fresh enough
             if age_minutes > max_age_minutes:
-                print(f"WARNING: Data is too old ({age_minutes:.1f} minutes > {max_age_minutes} minutes threshold)")
-                print("Returning empty DataFrame - consider checking your data fetching module")
+                self.logger.warning(f"WARNING: Data is too old ({age_minutes:.1f} minutes > {max_age_minutes} minutes threshold)")
+                self.logger.warning("Returning empty DataFrame - consider checking your data fetching module")
                 return pd.DataFrame()
             
-            print(f"Data is fresh (within {max_age_minutes} minutes)")
-            print(f"Retrieved most recent values for {len(df)} parameters")
+            self.logger.info(f"Data is fresh (within {max_age_minutes} minutes)")
+            self.logger.info(f"Retrieved most recent values for {len(df)} parameters")
             return df
             
         except Exception as e:

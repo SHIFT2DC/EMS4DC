@@ -18,7 +18,8 @@
           "decimalPlaces": 0,
           "unit": "W",
           "description": "REQUIRED: Power of the PV in Watts",
-          "wordOrder": "big"
+          "wordOrder": "big",
+          "mode": "read"
         },
         {
           "id": "param-1759735812796",
@@ -32,7 +33,8 @@
           "decimalPlaces": 0,
           "unit": "V",
           "description": "OPTIONAL: Voltage on the PV side of the converter",
-          "wordOrder": "big"
+          "wordOrder": "big",
+          "mode": "read"
         },
         {
           "id": "param-1759735831900",
@@ -46,7 +48,8 @@
           "decimalPlaces": 0,
           "unit": "A",
           "description": "OPTIONAL: Current flowing on the PV side of the converter",
-          "wordOrder": "big"
+          "wordOrder": "big",
+          "mode": "read"
         },
         {
           "id": "param-1759735832036",
@@ -60,7 +63,8 @@
           "decimalPlaces": 0,
           "unit": "V",
           "description": "OPTIONAL: Voltage on the DC bus side of the converter",
-          "wordOrder": "big"
+          "wordOrder": "big",
+          "mode": "read"
         },
         {
           "id": "param-1759735832163",
@@ -74,7 +78,8 @@
           "decimalPlaces": 0,
           "unit": "A",
           "description": "OPTIONAL: Current on the DC bus side of the converter",
-          "wordOrder": "big"
+          "wordOrder": "big",
+          "mode": "read"
         },
         {
           "id": "param-1759735832294",
@@ -88,7 +93,8 @@
           "decimalPlaces": 0,
           "unit": "Wh",
           "description": "OPTIONAL: Daily energy generated via PV in Watt-Hours.",
-          "wordOrder": "big"
+          "wordOrder": "big",
+          "mode": "read"
         },
         {
           "id": "param-1759735832423",
@@ -102,7 +108,8 @@
           "decimalPlaces": 0,
           "unit": "%",
           "description": "OPTIONAL: PV system efficiency in percent.",
-          "wordOrder": "big"
+          "wordOrder": "big",
+          "mode": "read"
         },
         {
           "id": "param-1759735832551",
@@ -116,7 +123,8 @@
           "decimalPlaces": 0,
           "unit": "Celsius",
           "description": "OPTIONAL: Temperature of the converter",
-          "wordOrder": "big"
+          "wordOrder": "big",
+          "mode": "read"
         },
         {
           "id": "param-1759735907198",
@@ -130,7 +138,8 @@
           "decimalPlaces": 0,
           "unit": "-",
           "description": "OPTIONAL: Current operational mode of the converter",
-          "wordOrder": "big"
+          "wordOrder": "big",
+          "mode": "read"
         }
       ]
     },
@@ -152,7 +161,8 @@
           "decimalPlaces": 0,
           "unit": "W",
           "description": "REQUIRED: Power of the Battery Energy Storage System in Watts.",
-          "wordOrder": "big"
+          "wordOrder": "big",
+          "mode": "read"
         },
         {
           "id": "param-1761729065223",
@@ -166,7 +176,113 @@
           "decimalPlaces": 0,
           "unit": "%",
           "description": "REQUIRED: State-of-Charge of the BESS in percent.",
-          "wordOrder": "big"
+          "wordOrder": "big",
+          "mode": "read"
+        },
+        {
+          "id": "param-1770054071288",
+          "name": "CHARGE_P",
+          "registerType": "holding",
+          "address": 270,
+          "modbusId": 1,
+          "dataType": "float32",
+          "scaleFactor": 1,
+          "offset": 0,
+          "decimalPlaces": 0,
+          "unit": "",
+          "description": "",
+          "wordOrder": "big",
+          "mode": "write"
+        },
+        {
+          "id": "param-1770054116867",
+          "name": "DISCHARGE_P",
+          "registerType": "holding",
+          "address": 274,
+          "modbusId": 1,
+          "dataType": "float32",
+          "scaleFactor": 1,
+          "offset": 0,
+          "decimalPlaces": 0,
+          "unit": "",
+          "description": "",
+          "wordOrder": "big",
+          "mode": "write"
+        },
+        {
+          "id": "param-1770054143564",
+          "name": "SOC_0_CHAR_V",
+          "registerType": "holding",
+          "address": 276,
+          "modbusId": 1,
+          "dataType": "float32",
+          "scaleFactor": 1,
+          "offset": 0,
+          "decimalPlaces": 0,
+          "unit": "",
+          "description": "",
+          "wordOrder": "big",
+          "mode": "write"
+        },
+        {
+          "id": "param-1770054176186",
+          "name": "SOC_0_DISCH_V",
+          "registerType": "holding",
+          "address": 278,
+          "modbusId": 1,
+          "dataType": "float32",
+          "scaleFactor": 1,
+          "offset": 0,
+          "decimalPlaces": 0,
+          "unit": "",
+          "description": "",
+          "wordOrder": "big",
+          "mode": "write"
+        },
+        {
+          "id": "param-1770054199750",
+          "name": "SOC_100_CHAR_V",
+          "registerType": "holding",
+          "address": 280,
+          "modbusId": 1,
+          "dataType": "float32",
+          "scaleFactor": 1,
+          "offset": 0,
+          "decimalPlaces": 0,
+          "unit": "",
+          "description": "",
+          "wordOrder": "big",
+          "mode": "write"
+        },
+        {
+          "id": "param-1770054205368",
+          "name": "SOC_100_DISCH_V",
+          "registerType": "holding",
+          "address": 282,
+          "modbusId": 1,
+          "dataType": "float32",
+          "scaleFactor": 1,
+          "offset": 0,
+          "decimalPlaces": 0,
+          "unit": "",
+          "description": "",
+          "wordOrder": "big",
+          "mode": "write"
+        },
+        {
+          "id": "param-1770054213514",
+          "name": "CONV_OFST",
+          "registerType": "holding",
+          "address": 272,
+          "modbusId": 1,
+          "dataType": "float32",
+          "scaleFactor": 1,
+          "offset": 0,
+          "decimalPlaces": 0,
+          "unit": "",
+          "description": "",
+          "wordOrder": "big",
+          "mode": "write"
         }
       ]
     },
@@ -188,7 +304,8 @@
           "decimalPlaces": 0,
           "unit": "W",
           "description": "REQUIRED: Power of the AC/DC point in Watts.",
-          "wordOrder": "big"
+          "wordOrder": "big",
+          "mode": "read"
         },
         {
           "id": "param-1761729132991",
@@ -202,7 +319,8 @@
           "decimalPlaces": 0,
           "unit": "-",
           "description": "REQUIRED: Availability of the AC/DC point, can be either 0 or 1.",
-          "wordOrder": "big"
+          "wordOrder": "big",
+          "mode": "read"
         },
         {
           "id": "param-1761729161367",
@@ -216,7 +334,113 @@
           "decimalPlaces": 0,
           "unit": "W",
           "description": "REQUIRED: Gridservice amount of the AC/DC point in Watts.",
-          "wordOrder": "big"
+          "wordOrder": "big",
+          "mode": "read"
+        },
+        {
+          "id": "param-1767961018757",
+          "name": "FW_VOLT_OFST",
+          "registerType": "holding",
+          "address": 256,
+          "modbusId": 1,
+          "dataType": "float32",
+          "scaleFactor": 1,
+          "offset": 0,
+          "decimalPlaces": 0,
+          "unit": "V",
+          "description": "",
+          "wordOrder": "big",
+          "mode": "write"
+        },
+        {
+          "id": "param-1767961915500",
+          "name": "FW_VOLT_DELTA",
+          "registerType": "holding",
+          "address": 258,
+          "modbusId": 1,
+          "dataType": "float32",
+          "scaleFactor": 1,
+          "offset": 0,
+          "decimalPlaces": 0,
+          "unit": "V",
+          "description": "",
+          "wordOrder": "big",
+          "mode": "write"
+        },
+        {
+          "id": "param-1767961928980",
+          "name": "RE_VOLT_OFST",
+          "registerType": "holding",
+          "address": 262,
+          "modbusId": 1,
+          "dataType": "float32",
+          "scaleFactor": 1,
+          "offset": 0,
+          "decimalPlaces": 0,
+          "unit": "V",
+          "description": "",
+          "wordOrder": "big",
+          "mode": "write"
+        },
+        {
+          "id": "param-1767961935896",
+          "name": "RE_VOLT_DELTA",
+          "registerType": "holding",
+          "address": 264,
+          "modbusId": 1,
+          "dataType": "float32",
+          "scaleFactor": 1,
+          "offset": 0,
+          "decimalPlaces": 0,
+          "unit": "V",
+          "description": "",
+          "wordOrder": "big",
+          "mode": "write"
+        },
+        {
+          "id": "param-1767961940650",
+          "name": "VOLT_OFST",
+          "registerType": "holding",
+          "address": 268,
+          "modbusId": 1,
+          "dataType": "float32",
+          "scaleFactor": 1,
+          "offset": 0,
+          "decimalPlaces": 0,
+          "unit": "V",
+          "description": "",
+          "wordOrder": "big",
+          "mode": "write"
+        },
+        {
+          "id": "param-1767961947664",
+          "name": "FW_P_MAX",
+          "registerType": "holding",
+          "address": 260,
+          "modbusId": 1,
+          "dataType": "float32",
+          "scaleFactor": 1,
+          "offset": 0,
+          "decimalPlaces": 0,
+          "unit": "W",
+          "description": "",
+          "wordOrder": "big",
+          "mode": "write"
+        },
+        {
+          "id": "param-1767961956232",
+          "name": "RE_P_MAX",
+          "registerType": "holding",
+          "address": 266,
+          "modbusId": 1,
+          "dataType": "float32",
+          "scaleFactor": 1,
+          "offset": 0,
+          "decimalPlaces": 0,
+          "unit": "W",
+          "description": "",
+          "wordOrder": "big",
+          "mode": "write"
         }
       ]
     },
@@ -238,7 +462,8 @@
           "decimalPlaces": 0,
           "unit": "W",
           "description": "REQUIRED: Power of the load in Watts",
-          "wordOrder": "big"
+          "wordOrder": "big",
+          "mode": "read"
         }
       ]
     },
@@ -260,7 +485,8 @@
           "decimalPlaces": 0,
           "unit": "W",
           "description": "REQUIRED: Instantaneous power of the unidirectional EV charger.",
-          "wordOrder": "big"
+          "wordOrder": "big",
+          "mode": "read"
         },
         {
           "id": "param-1761821574793",
@@ -274,7 +500,8 @@
           "decimalPlaces": 0,
           "unit": "%",
           "description": "REQUIRED: SoC of the car connected to the unidirectional EV charger in percent.",
-          "wordOrder": "big"
+          "wordOrder": "big",
+          "mode": "read"
         },
         {
           "id": "param-1761821723696",
@@ -288,7 +515,8 @@
           "decimalPlaces": 0,
           "unit": "Wh",
           "description": "REQUIRED: Capacity of the car connected to the unidirectional EV charger in Watt-Hours",
-          "wordOrder": "big"
+          "wordOrder": "big",
+          "mode": "read"
         },
         {
           "id": "param-1761821761497",
@@ -302,7 +530,8 @@
           "decimalPlaces": 0,
           "unit": "W",
           "description": "REQUIRED: The maximum power the car can accept ",
-          "wordOrder": "big"
+          "wordOrder": "big",
+          "mode": "read"
         }
       ]
     },
@@ -324,7 +553,8 @@
           "decimalPlaces": 0,
           "unit": "%",
           "description": "REQUIRED: SoC of the car connected to bidirectional EV charger in percent",
-          "wordOrder": "big"
+          "wordOrder": "big",
+          "mode": "read"
         },
         {
           "id": "param-1761821609266",
@@ -338,7 +568,8 @@
           "decimalPlaces": 0,
           "unit": "W",
           "description": "REQUIRED: Instantaneous power of the bidirectional EV charger in Watts ",
-          "wordOrder": "big"
+          "wordOrder": "big",
+          "mode": "read"
         },
         {
           "id": "param-1761821804017",
@@ -352,7 +583,8 @@
           "decimalPlaces": 0,
           "unit": "Wh",
           "description": "REQUIRED: Capacity of the battery of the car connected to bidirectional EV charger in Wh",
-          "wordOrder": "big"
+          "wordOrder": "big",
+          "mode": "read"
         },
         {
           "id": "param-1761821804168",
@@ -366,7 +598,8 @@
           "decimalPlaces": 0,
           "unit": "W",
           "description": "REQUIRED: Maximum power the car connected to the bidirectional EV charger can provide/accept.",
-          "wordOrder": "big"
+          "wordOrder": "big",
+          "mode": "read"
         },
         {
           "id": "param-1761821804536",
@@ -380,7 +613,8 @@
           "decimalPlaces": 0,
           "unit": "-",
           "description": "REQUIRED: Parameters which shows if the car can discharge at the moment, can be either 0 or 1",
-          "wordOrder": "big"
+          "wordOrder": "big",
+          "mode": "read"
         },
         {
           "id": "param-1761821804696",
@@ -394,7 +628,8 @@
           "decimalPlaces": 0,
           "unit": "%",
           "description": "REQUIRED: SoC of the car at the moment of arrival",
-          "wordOrder": "big"
+          "wordOrder": "big",
+          "mode": "read"
         }
       ]
     }

@@ -1,7 +1,7 @@
 /*
 SPDX-License-Identifier: Apache-2.0
 
-Copyright 2025 Eaton
+Copyright 2026 Eaton
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,8 +18,8 @@ File: page-ems-dashboard.jsx
 Description: # TODO: Add desc
 
 Created: 1st January 2025
-Last Modified: 30th October 2025
-Version: v1.0.0
+Last Modified: 3rd February 2026
+Version: v1.2.0
 */
 
 import React, { useState, useEffect } from 'react';
@@ -41,7 +41,7 @@ const EMSDashboard = () => {
   // Fetch available dates
   const fetchAvailableDates = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/available-dates`);
+      const response = await fetch(`${API_BASE_URL}/ems-data/available-dates`);
       const result = await response.json();
       if (result.success) {
         setAvailableDates(result.dates);

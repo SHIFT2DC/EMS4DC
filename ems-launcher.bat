@@ -1,6 +1,6 @@
 ::  SPDX-License-Identifier: Apache-2.0
 :: 
-::  Copyright 2025 Eaton
+::  Copyright 2026 Eaton
 :: 
 ::  Licensed under the Apache License, Version 2.0 (the "License");
 ::  you may not use this file except in compliance with the License.
@@ -17,8 +17,8 @@
 ::  Description: # TODO: Add desc
 ::
 ::  Created: 1st January 2025
-::  Last Modified: 30th October 2025
-::  Version: v1.0.0
+::  Last Modified: 3rd February 2026
+::  Version: v1.2.0
 
 
 @echo off
@@ -97,7 +97,7 @@ echo.
 
 :: Start PostgreSQL
 echo %BOLD%%BLUE%[1/4] Starting PostgreSQL server...%RESET%
-start "PostgreSQL Server" cmd /k "echo %MAGENTA%PostgreSQL Server%RESET% && pg_ctl.exe start -D "C:\Users\YOUR_USER\Documents\1_SHIFT2DC\1_1_EMS Data" && echo %GREEN%PostgreSQL started successfully!%RESET%"
+start "PostgreSQL Server" cmd /k "echo %MAGENTA%PostgreSQL Server%RESET% && pg_ctl.exe start -D "C:\Users\E0786730\Documents\1_SHIFT2DC\1_1_EMS Data" && echo %GREEN%PostgreSQL started successfully!%RESET%"
 timeout /t 3 /nobreak >nul
 
 :: Start Frontend Server

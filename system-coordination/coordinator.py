@@ -1,7 +1,7 @@
 '''
 SPDX-License-Identifier: Apache-2.0
 
-Copyright 2025 Eaton
+Copyright 2026 Eaton
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -15,23 +15,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 
 File: coordinator.py
-Description: # TODO: Add desc
+Description: Handles periodic data reading via Modbus TCP (every 10 seconds)
+and in parallel optimizer execution (every 15 minutes)
 
 Created: 1st July 2025
-Last Modified: 30th October 2025
-Version: v1.0.0
+Last Modified: 3rd February 2026
+Version: v1.2.0
 '''
 
 
-from time_utils import calculate_time_for_execution
+from utils.time_utils import calculate_time_for_execution
+from utils.logging_utils import setup_logging
 import json
 import time
 import logging
 import threading
 from datetime import datetime
 import importlib
-from modeOptimizer import OptimizerMode
-import droopMode
+
 import psycopg2
 from contextlib import contextmanager
 
@@ -47,8 +48,12 @@ DB_HOST = os.getenv('DB_HOST')
 DB_PORT = os.getenv('DB_PORT')
 DB_NAME = os.getenv('DB_NAME')
 
+# Operating modes for the system
+from modes.optimizer_mode import OptimizerMode
+from modes.droop_mode import DroopMode
+
 # Modbus reader
-from fetchMeasurements import ModbusDataReader
+from data.measurements_client import ModbusDataReader
 
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -187,9 +192,9 @@ class Coordinator:
         self.current_mode = None
         self.modes = {
             'optimizer': OptimizerMode(config),
-            # 'rulebased': ruleBasedMode(config),
+            'droop': DroopMode(config),
         }
-        self.logger = self._setup_logging()
+        self.logger = logging.getLogger('ems')
         
         # Initialize database and data collection components
         self.database_manager = DatabaseManager()
@@ -199,25 +204,17 @@ class Coordinator:
         self.data_collection_thread = None
         self.running = False
 
-    def _setup_logging(self):
-        logger = logging.getLogger('ems')
-        logger.setLevel(logging.INFO)
-        handler = logging.StreamHandler()
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-        return logger
 
     def select_mode(self):
         """Evaluate conditions and select appropriate mode"""
         if self._should_use_optimizer():
             return 'optimizer'
         else:
-            return 'rulebased'
+            return 'droop'
 
     def _should_use_optimizer(self):
         """Logic to determine if optimizer mode should be used"""
-        return True  # Placeholder
+        return False  # Placeholder
 
     def run_cycle(self):
         """Execute a single coordination cycle"""
@@ -233,7 +230,7 @@ class Coordinator:
 
         # Execute the selected mode
         try:
-            if selected_mode == 'optimizer':
+            if selected_mode == 'optimizer' or selected_mode == 'droop':
                 result = self.modes[selected_mode].execute()
                 self.logger.info(f"Executed {selected_mode} mode: {result}")
         except Exception as e:
@@ -296,10 +293,23 @@ class Coordinator:
         self.logger.info("Shutting down coordinator...")
         self.running = False
         self.stop_data_collection()
+        
+        # Clean up modes
+        for mode_name, mode in self.modes.items():
+            if hasattr(mode, 'cleanup'):
+                try:
+                    mode.cleanup()
+                    self.logger.info(f"Cleaned up {mode_name} mode")
+                except Exception as e:
+                    self.logger.error(f"Error cleaning up {mode_name} mode: {e}")
+        
         self.logger.info("Coordinator shutdown complete")
 
 
 if __name__ == "__main__":
+    
+    setup_logging()
+
     # Example configuration
     with open('./../web-app/backend/config.json', 'r') as file:
         config = json.load(file)
