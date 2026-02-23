@@ -13,201 +13,390 @@ Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
+limitations under the License.
 
-File: page-home.jsx
-Description: # TODO: Add desc
+@File: page-home.jsx
+@Description: # TODO: Add desc
 
-Created: 1st January 2025
-Last Modified: 3rd February 2026
-Version: v1.2.0
+@Created: 1st January 2025
+@Last Modified: 18 February 2026
+@Author: LeonGritsyuk-eaton
+
+@Version: v2.0.0
 */
 
-import { useState, useEffect } from "react"
-import { Link } from "react-router-dom"
-import { Battery, Car, Gauge, Plug, Sun, Zap } from "lucide-react"
+
+/*@File: page-home.jsx*/
+import React, { useEffect, useRef, useState } from "react"
+import { useNavigate } from "react-router-dom"
+import { Battery, Car, Plug, Sun, Zap, Wind, Grid3x3, RefreshCw } from "lucide-react"
 import PowerFlow from "../components/PowerFlow"
+import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { AlertCircle } from "lucide-react"
+import api from "@/lib/axios"
 
-function Home() {
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const [data, setData] = useState({
-    solarPanels: "-",
-    loads: "-",
-    evChargersUni: "-",
-    evChargersBi: "-",
-    storageSystem: "-",
-    activeFrontEnd: "-",
-  })
+const DEVICE_TYPE_ICONS = {
+  PV: Sun,
+  BESS: Battery,
+  LOAD: Plug,
+  CRITICAL_LOAD: Plug,
+  UNI_EV: Car,
+  BI_EV: Zap,
+  WIND: Wind,
+  GRID: Grid3x3,
+  AFE: Grid3x3
+}
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const API_BASE_URL = import.meta.env.VITE_BASE_URL || "http://localhost:3001"
-        const response = await fetch(`${API_BASE_URL}/api/data`)
+const DEVICE_TYPE_COLORS = {
+  PV: "bg-yellow-50 border-yellow-300 text-yellow-700 hover:bg-yellow-100",
+  BESS: "bg-green-50 border-green-300 text-green-700 hover:bg-green-100",
+  LOAD: "bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100",
+  CRITICAL_LOAD: "bg-red-50 border-red-300 text-red-700 hover:bg-red-100",
+  UNI_EV: "bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100",
+  BI_EV: "bg-purple-50 border-purple-300 text-purple-700 hover:bg-purple-100",
+  WIND: "bg-teal-50 border-teal-300 text-teal-700 hover:bg-teal-100",
+  GRID: "bg-orange-50 border-orange-300 text-orange-700 hover:bg-orange-100",
+  AFE: "bg-indigo-50 border-indigo-300 text-indigo-700 hover:bg-indigo-100"
+}
 
-        if (!response.ok) {
-          const errorData = await response.json()
-          throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
-        }
-        const jsonData = await response.json()
-        setData({
-          solarPanels: (Math.abs(jsonData.PV_POWER) / 1000).toFixed(1) || "-",
-          loads: (jsonData.LOAD_POWER / 1000).toFixed(1) || "-",
-          evChargersUni: (jsonData.EV1_POWER / 1000).toFixed(1) || "-",
-          evChargersBi: (jsonData.EV2_POWER / 1000).toFixed(1) || "-",
-          storageSystem: (jsonData.BESS_POWER / 1000).toFixed(1) || "-",
-          activeFrontEnd: (jsonData.AFE_POWER / 1000).toFixed(1) || "-",
-        })
-        setError(null)
-      } catch (error) {
-        console.error("Error fetching data:", error)
-        setError(error.message)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchData()
-    const intervalId = setInterval(fetchData, 5000)
-    return () => clearInterval(intervalId)
-  }, [])
-
-  const dataPoints = [
-    {
-      icon: <Sun className="w-8 h-8" />,
-      label: "Solar Panels",
-      value: `${data.solarPanels} kW`,
-      link: "/devices/solarpanels",
-      x: 20,
-      y: 20,
-      flowDirection: "inward",
-      hasPower: !isLoading && data.solarPanels !== "-" && Number.parseFloat(data.solarPanels) > 0,
-    },
-    {
-      icon: <Plug className="w-8 h-8" />,
-      label: "Loads",
-      value: `${data.loads} kW`,
-      link: "/devices/otherloads",
-      x: 80,
-      y: 20,
-      flowDirection: "outward",
-      hasPower: !isLoading && data.loads !== "-" && Number.parseFloat(data.loads) > 0,
-    },
-    {
-      icon: <Car className="w-8 h-8" />,
-      label: "Unidirectional Charger",
-      value: `${data.evChargersUni} kW`,
-      link: "/devices/unidirev",
-      x: 90,
-      y: 40,
-      flowDirection: "outward",
-      hasPower: !isLoading && data.evChargersUni !== "-" && Number.parseFloat(data.evChargersUni) > 0,
-    },
-    {
-      icon: <Zap className="w-8 h-8" />,
-      label: "Bidirectional Charger",
-      value: `${data.evChargersBi} kW`,
-      link: "/devices/bidirev",
-      x: 90,
-      y: 70,
-      flowDirection: Number.parseFloat(data.evChargersBi) > 0 ? "outward" : "inward",
-      hasPower: !isLoading && data.evChargersBi !== "-" && Math.abs(Number.parseFloat(data.evChargersBi)) > 0,
-    },
-    {
-      icon: <Battery className="w-8 h-8" />,
-      label: "Storage Systems",
-      value: `${data.storageSystem} kW`,
-      link: "/devices/storagesystems",
-      x: 50,
-      y: 90,
-      flowDirection: Number.parseFloat(data.storageSystem) > 0 ? "outward" : "inward",
-      hasPower: !isLoading && data.storageSystem !== "-" && Math.abs(Number.parseFloat(data.storageSystem)) > 0,
-    },
-    {
-      icon: <Gauge className="w-8 h-8" />,
-      label: "Active Front End",
-      value: `${data.activeFrontEnd} kW`,
-      link: "/devices/activefrontend",
-      x: 10,
-      y: 50,
-      flowDirection: Number.parseFloat(data.activeFrontEnd) > 0 ? "inward" : "outward",
-      hasPower: !isLoading && data.activeFrontEnd !== "-" && Math.abs(Number.parseFloat(data.activeFrontEnd)) > 0,
-    },
-  ]
-
+function DeviceCardSkeleton() {
   return (
-    <div className="relative min-h-[600px] w-full max-w-4xl mx-auto p-8">
-      {/* Connection Lines and Power Flow */}
-      <svg
-        className="absolute inset-0 w-full h-full pointer-events-none"
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 100 100"
-      >
-        {dataPoints.map((point, index) => (
-          <PowerFlow
-            key={index}
-            x1={point.x}
-            y1={point.y}
-            x2={50}
-            y2={50}
-            direction={point.flowDirection}
-            animate={point.hasPower}
-          />
-        ))}
-      </svg>
+    <div className="bg-gray-50 border-2 border-gray-200 rounded-2xl p-4 shadow-lg min-w-[140px]">
+      <div className="flex justify-center mb-3">
+        <Skeleton className="w-16 h-16 rounded-xl" />
+      </div>
+      <Skeleton className="h-4 w-24 mx-auto mb-2" />
+      <Skeleton className="h-8 w-16 mx-auto mb-1" />
+      <Skeleton className="h-3 w-20 mx-auto" />
+    </div>
+  )
+}
 
-      {/* Central Circle */}
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-        <div className="relative w-40 h-40 bg-blue-600 rounded-full flex items-center justify-center text-white">
-          <div className="text-center">
-            <div className="text-lg font-semibold">{isLoading ? "FETCHING" : "SYSTEM"}</div>
-            <div className="text-sm">{isLoading ? "DATA..." : "OVERVIEW"}</div>
-          </div>
-        </div>
+function TopologyDiagramSkeleton() {
+  return (
+    <div className="max-w-7xl mx-auto bg-white rounded-xl shadow-xl p-8 border-2 border-gray-200">
+      {/* Top Row Skeleton */}
+      <div className="flex justify-evenly mb-8">
+        {[1, 2, 3, 4].map((i) => (
+          <DeviceCardSkeleton key={`top-${i}`} />
+        ))}
       </div>
 
-      {/* Radial Items */}
-      <div className="absolute inset-0">
-        {dataPoints.map((point, index) => (
-          <div
-            key={index}
-            className="absolute"
-            style={{
-              left: `${point.x}%`,
-              top: `${point.y}%`,
-              transform: "translate(-50%, -50%)",
-            }}
-          >
-            <DataPoint
-              icon={point.icon}
-              label={point.label}
-              value={point.value}
-              link={point.link}
-              isLoading={isLoading}
-            />
-          </div>
+      {/* DC Bus Skeleton */}
+      <div className="relative my-16">
+        <Skeleton className="h-12 w-full rounded-lg" />
+      </div>
+
+      {/* Bottom Row Skeleton */}
+      <div className="flex justify-evenly mt-8">
+        {[1, 2, 3, 4].map((i) => (
+          <DeviceCardSkeleton key={`bottom-${i}`} />
         ))}
       </div>
     </div>
   )
 }
 
-function DataPoint({ icon, label, value, link, isLoading }) {
+function StatisticsPanelSkeleton() {
   return (
-    <Link to={link} className="relative flex flex-col items-center group">
-      <div className="w-16 h-16 bg-white rounded-full shadow-lg flex items-center justify-center text-blue-600 relative group-hover:bg-blue-100 transition-colors">
-        {icon}
+    <div className="max-w-7xl mx-auto mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="bg-white rounded-xl shadow-lg p-6 border-2 border-gray-200">
+          <Skeleton className="h-4 w-32 mb-2" />
+          <Skeleton className="h-10 w-24" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function Home() {
+  const navigate = useNavigate()
+  const [devices, setDevices] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [lastUpdate, setLastUpdate] = useState(null)
+
+  const containerRef = useRef(null)
+  const busRef = useRef(null)
+  const deviceRefs = useRef({})
+  const [connectors, setConnectors] = useState([])
+
+  const loadDevices = async () => {
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const { data } = await api.get('/api/home')
+
+      const transformedDevices = data.assets.map(asset => ({
+        id: asset.id,
+        type: asset.type,
+        name: asset.name,
+        power: asset.power || 0,
+        asset_key: asset.asset_key
+      }))
+
+      setDevices(transformedDevices)
+      setLastUpdate(new Date(data.timestamp))
+    } catch (err) {
+      console.error("Error loading devices:", err)
+      setError(err.response?.data?.message ?? err.message)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadDevices()
+    const interval = setInterval(loadDevices, 5000)
+    return () => clearInterval(interval)
+  }, [])
+
+  // Split devices into top and bottom rows
+  const topDevices = devices.slice(0, Math.ceil(devices.length / 2))
+  const bottomDevices = devices.slice(Math.ceil(devices.length / 2))
+
+  const computeConnectors = () => {
+    const container = containerRef.current
+    const bus = busRef.current
+    if (!container || !bus) return
+
+    const cRect = container.getBoundingClientRect()
+    const busRect = bus.getBoundingClientRect()
+
+    const busTop = busRect.top - cRect.top
+    const busBottom = busRect.bottom - cRect.top
+
+    const results = []
+
+    const computeFor = (list, isTopRow) => {
+      list.forEach((dev) => {
+        const node = deviceRefs.current[dev.id]
+        if (!node) return
+        const dRect = node.getBoundingClientRect()
+        const devCenterX = dRect.left + dRect.width / 2 - cRect.left
+        const devTop = dRect.top - cRect.top
+        const devBottom = dRect.bottom - cRect.top
+
+        const startX = devCenterX
+        const startY = isTopRow ? devBottom : devTop
+        const endX = devCenterX
+        const endY = isTopRow ? busTop : busBottom
+
+        const direction = dev.power > 0 ? "inward" : dev.power < 0 ? "outward" : "idle"
+
+        results.push({
+          id: dev.id,
+          x1: startX,
+          y1: startY,
+          x2: endX,
+          y2: endY,
+          direction,
+        })
+      })
+    }
+
+    computeFor(topDevices, true)
+    computeFor(bottomDevices, false)
+
+    setConnectors(results)
+  }
+
+  useEffect(() => {
+    computeConnectors()
+    const ro = new ResizeObserver(() => computeConnectors())
+    if (containerRef.current) ro.observe(containerRef.current)
+    window.addEventListener("scroll", computeConnectors, true)
+    window.addEventListener("resize", computeConnectors)
+    return () => {
+      ro.disconnect()
+      window.removeEventListener("scroll", computeConnectors, true)
+      window.removeEventListener("resize", computeConnectors)
+    }
+  }, [devices])
+
+  const setDeviceRef = (id, node) => {
+    if (!node) {
+      delete deviceRefs.current[id]
+    } else {
+      deviceRefs.current[id] = node
+    }
+  }
+
+  const handleDeviceClick = (assetKey) => {
+    navigate(`/device/${assetKey}`)
+  }
+
+  if (isLoading && devices.length === 0) {
+    return (
+      <div className="relative min-h-screen p-8">
+        {/* Header Skeleton */}
+        <div className="max-w-7xl mx-auto mb-8 flex justify-between items-center">
+          <div>
+            <Skeleton className="h-8 w-80 mb-2" />
+            <Skeleton className="h-4 w-48" />
+          </div>
+          <Skeleton className="h-10 w-24" />
+        </div>
+
+        {/* Main Content Skeleton */}
+        <TopologyDiagramSkeleton />
+        <StatisticsPanelSkeleton />
       </div>
-      <div className="mt-2 text-center">
-        <div className="text-sm font-medium text-gray-600 group-hover:text-blue-600 transition-colors">{label}</div>
-        {isLoading ? (
-          <Skeleton className="h-6 w-20 mt-1" />
-        ) : (
-          <div className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">{value}</div>
-        )}
+    )
+  }
+
+  return (
+    <div className="relative min-h-screen p-8">
+      {/* Header Controls */}
+      <div className="max-w-7xl mx-auto mb-8 flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">EMS | Building Demo Installation</h1>
+          {lastUpdate && (
+            <p className="text-sm text-gray-500">
+              Last updated: {lastUpdate.toLocaleTimeString()}
+            </p>
+          )}
+        </div>
+        <Button onClick={loadDevices} variant="outline" disabled={isLoading}>
+          <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
       </div>
-    </Link>
+
+      {/* Error Alert */}
+      {error && (
+        <div className="max-w-7xl mx-auto mb-8">
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        </div>
+      )}
+
+      {/* No devices message */}
+      {!isLoading && devices.length === 0 && (
+        <div className="max-w-7xl mx-auto">
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              No assets configured. Please go to Settings to add devices to your site.
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
+
+      {/* Main Topology Diagram */}
+      {devices.length > 0 && (
+        <>
+          <div ref={containerRef} className="max-w-7xl mx-auto bg-white rounded-xl shadow-xl p-8 border-2 border-gray-200 relative">
+
+            {/* Top Row Devices */}
+            <div className="flex justify-evenly mb-8">
+              {topDevices.map((device) => (
+                <div key={device.id} ref={(el) => setDeviceRef(device.id, el)}>
+                  <DeviceCard device={device} onClick={() => handleDeviceClick(device.asset_key)} />
+                </div>
+              ))}
+            </div>
+
+            {/* DC Bus */}
+            <div className="relative my-16">
+              <div ref={busRef} className="h-12 bg-gradient-to-r from-blue-600 via-blue-700 to-blue-600 rounded-lg shadow-lg flex items-center justify-center">
+                <span className="text-white font-bold text-xl tracking-wider">DC BUS</span>
+              </div>
+            </div>
+
+            {/* SVG overlay for all connectors */}
+            <svg className="absolute inset-0 pointer-events-none" width="100%" height="100%" style={{ overflow: "visible" }}>
+              {connectors.map((c) => (
+                <PowerFlow key={c.id} x1={c.x1} y1={c.y1} x2={c.x2} y2={c.y2} direction={c.direction} />
+              ))}
+            </svg>
+
+            {/* Bottom Row Devices */}
+            <div className="flex justify-evenly mt-8">
+              {bottomDevices.map((device) => (
+                <div key={device.id} ref={(el) => setDeviceRef(device.id, el)}>
+                  <DeviceCard device={device} onClick={() => handleDeviceClick(device.asset_key)} />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Statistics Panel */}
+          <div className="max-w-7xl mx-auto mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-white rounded-xl shadow-lg p-6 border-2 border-gray-200">
+              <h3 className="text-sm font-semibold text-gray-600 mb-2">Total Generation</h3>
+              <p className="text-3xl font-bold text-green-600">
+                {devices
+                  .filter((d) => d.power > 0)
+                  .reduce((sum, d) => sum + d.power / 1000, 0)
+                  .toFixed(1)}{" "}
+                kW
+              </p>
+            </div>
+            <div className="bg-white rounded-xl shadow-lg p-6 border-2 border-gray-200">
+              <h3 className="text-sm font-semibold text-gray-600 mb-2">Total Consumption</h3>
+              <p className="text-3xl font-bold text-red-600">
+                {Math.abs(devices.filter((d) => d.power < 0).reduce((sum, d) => sum + d.power / 1000, 0)).toFixed(1)} kW
+              </p>
+            </div>
+            <div className="bg-white rounded-xl shadow-lg p-6 border-2 border-gray-200">
+              <h3 className="text-sm font-semibold text-gray-600 mb-2">Net Power</h3>
+              <p className="text-3xl font-bold text-blue-600">
+                {devices.reduce((sum, d) => sum + d.power / 1000, 0).toFixed(1)} kW
+              </p>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+function DeviceCard({ device, onClick }) {
+  const Icon = DEVICE_TYPE_ICONS[device.type] || Plug
+  const colorClass = DEVICE_TYPE_COLORS[device.type] || "bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100"
+
+  return (
+    <div
+      onClick={onClick}
+      className={`relative ${colorClass} border-2 rounded-2xl p-4 shadow-lg min-w-[140px] transition-all hover:shadow-xl cursor-pointer hover:scale-105`}
+    >
+      <div className="flex justify-center mb-3">
+        <div className="w-16 h-16 bg-white rounded-xl shadow-md flex items-center justify-center">
+          <Icon className="w-10 h-10" />
+        </div>
+      </div>
+
+      <div className="text-center text-sm font-bold mb-2">{device.name}</div>
+
+      <div className="text-center">
+        <div className="text-2xl font-bold">{Math.abs(device.power / 1000).toFixed(1)} kW</div>
+        <div
+          className={`text-xs font-semibold mt-1 ${
+            device.power > 0
+              ? "text-green-600"
+              : device.power < 0
+              ? "text-red-600"
+              : "text-gray-400"
+          }`}
+        >
+          {device.power > 10 ? "↓ Supplying" : device.power < -10 ? "↑ Consuming" : "Idle"}
+        </div>
+      </div>
+
+      {/* Click hint */}
+      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="text-xs bg-black bg-opacity-70 text-white px-2 py-1 rounded">
+          Click for details
+        </div>
+      </div>
+    </div>
   )
 }
 

@@ -10,12 +10,12 @@ Documentation for the project can be found here:
 The default high-level architecture for which this EMS is built is depicted on the following figure:
 ![](./docs/high-level-architecture.jpg)
 
+However, the EMS4DC can be adjusted to include different combination of energy assets. See [Docs](https://shift2dc.github.io/docs.ems/)
+
 ## Project's Structure:
 ```
-├── 📁 docs <-------------------------------- Contains documentation images
-│   └── 🖼️ high-level-architecture.jpg
-├── 📁 system-coordination <----------------- Contains code to manage Python stack
-│   ├── 📁 data <---------------------------- Modules for Modbus communication and database queries
+├── 📁 core <-------------------------------- Core Python functionality of the EMS4DC
+│   ├── 📁 data <---------------------------- Data related modules and utilities
 │   │   ├── 🐍 __init__.py
 │   │   ├── 🐍 database_client.py
 │   │   ├── 🐍 measurements_client.py
@@ -26,10 +26,35 @@ The default high-level architecture for which this EMS is built is depicted on t
 │   │   ├── 🐍 base_driver.py
 │   │   ├── 🐍 bess_driver.py
 │   │   └── 🐍 template_driver.py
-│   ├── 📁 modes <--------------------------- Implementation of EMS operation in different modes
+│   ├── 📁 forecast_utils <------------------ Utilities which are used for forecast generation
+│   │   ├── 🐍 __init__.py
+│   │   ├── 🐍 data_validator.py
+│   │   ├── 🐍 db_config.py
+│   │   ├── 🐍 forecast_cli.py
+│   │   ├── 🐍 forecast_generator.py
+│   │   ├── 🐍 forecast_models.py
+│   │   └── 🐍 model_trainer.py
+│   ├── 📁 metrics_utils <------------------ Utilities which are used for metrics calculation
+│   │   ├── 🐍 __init__.py
+│   │   ├── 🐍 config_loader.py
+│   │   ├── 🐍 data_loader.py
+│   │   ├── 🐍 database.py
+│   │   ├── 🐍 device_performance_metrics.py
+│   │   ├── 🐍 efficiency_utilization_metrics.py
+│   │   ├── 🐍 energy_flow_metrics.py
+│   │   ├── 🐍 metrics_storage.py
+│   │   ├── 🐍 orchestrator.py
+│   │   └── 🐍 statistical_metrics.py
+│   ├── 📁 modes <--------------------------- Implementation of EMS4DC operation in different modes
 │   │   ├── 🐍 __init__.py
 │   │   ├── 🐍 droop_mode.py
 │   │   └── 🐍 optimizer_mode.py
+│   ├── 📁 optimization <-------------------- Provides an adjustable optimization modules
+│   │   ├── 🐍 __init__.py
+│   │   ├── 🐍 asset_validator.py
+│   │   ├── 🐍 base_optimizer.py
+│   │   ├── 🐍 objective_optimizers.py
+│   │   └── 🐍 optimizer.py
 │   ├── 📁 utils <--------------------------- Miscellaneous functions and modules used in system
 │   │   ├── 🐍 __init__.py
 │   │   ├── 🐍 database_utils.py
@@ -37,57 +62,74 @@ The default high-level architecture for which this EMS is built is depicted on t
 │   │   ├── 🐍 optimizer_utils.py
 │   │   └── 🐍 time_utils.py
 │   ├── 🐍 __init__.py
-│   ├── 🐍 coordinator.py <------------------ Main module which orchestrates operation of the Python stack
+│   ├── 🐍 forecast.py
+│   ├── 🐍 measure.py
+│   ├── 🐍 metrics.py
+│   ├── 🐍 optimizer.py
 │   └── 📄 requirements.txt
-├── 📁 web-app <----------------------------- A Vite + React + Node.js fullstack web app
+├── 📁 docs
+│   └── 🖼️ high-level-architecture.jpg
+├── 📁 web-app
 │   ├── 📁 backend <------------------------- Backend with Node.js/Express.js
+│   │   ├── 📁 auth
+│   │   │   ├── 📄 middleware.js
+│   │   │   └── 📄 passport.js
 │   │   ├── 📁 db <-------------------------- Database module for connection
 │   │   │   └── 📄 pool.js
 │   │   ├── 📁 routes <---------------------- Routes for handling requests for different pages
+│   │   │   ├── 📄 auth.js
 │   │   │   ├── 📄 page-charts.js
-│   │   │   ├── 📄 page-config.js
 │   │   │   ├── 📄 page-debug-optim.js
+│   │   │   ├── 📄 page-device.js
 │   │   │   ├── 📄 page-droop.js
 │   │   │   ├── 📄 page-ems.js
 │   │   │   ├── 📄 page-home.js
-│   │   │   ├── 📄 page-modbus.js
-│   │   │   └── 📄 page-sys-info.js
+│   │   │   ├── 📄 page-metrics.js
+│   │   │   ├── 📄 page-settings.js
+│   │   │   ├── 📄 page-sys-info.js
+│   │   │   ├── 📄 profile.js
+│   │   │   └── 📄 users.js
 │   │   ├── ⚙️ .env.example
 │   │   ├── ⚙️ config.json
 │   │   ├── ⚙️ modbus.json
+│   │   ├── ⚙️ package-lock.json
+│   │   ├── ⚙️ package.json
 │   │   └── 📄 server.js
 │   └── 📁 frontend <------------------------ Frontend Vite + React app
 │       ├── 📁 public
+│       │   └── 🖼️ 16x16.png
 │       ├── 📁 src
 │       │   ├── 📁 assets
 │       │   ├── 📁 components <-------------- Frontend components used across HMI
+│       │   │   ├── 📄 DeviceDynamicNavigation.jsx
 │       │   │   ├── 📄 DevicesLayout.jsx
 │       │   │   ├── 📄 Header.jsx
 │       │   │   ├── 📄 Layout.jsx
 │       │   │   ├── 📄 PowerFlow.jsx
+│       │   │   ├── 📄 ProtectedRoute.jsx
 │       │   │   └── 📄 TurboLink.jsx
 │       │   ├── 📁 config
+│       │   ├── 📁 context
+│       │   │   └── 📄 AuthContext.jsx
 │       │   ├── 📁 hooks
 │       │   │   ├── 📄 use-mobile.jsx
 │       │   │   └── 📄 use-toast.js
 │       │   ├── 📁 lib
+│       │   │   ├── 📄 axios.js
 │       │   │   └── 📄 utils.js
 │       │   ├── 📁 pages <------------------- Contains implementation of individual pages used in HMI
-│       │   │   ├── 📄 device-active-front-end.jsx
-│       │   │   ├── 📄 device-bidir-ev-charger.jsx
-│       │   │   ├── 📄 device-electric-grid.jsx
-│       │   │   ├── 📄 device-energy-storage-system.jsx
-│       │   │   ├── 📄 device-load.jsx
-│       │   │   ├── 📄 device-solar-panels.jsx
-│       │   │   ├── 📄 device-unidir-ev-charger.jsx
 │       │   │   ├── 📄 page-charts.jsx
-│       │   │   ├── 📄 page-config.jsx
+│       │   │   ├── 📄 page-device-dynamic.jsx
 │       │   │   ├── 📄 page-droop-curves.jsx
 │       │   │   ├── 📄 page-ems-dashboard.jsx
 │       │   │   ├── 📄 page-home.jsx
-│       │   │   ├── 📄 page-modbus-config.jsx
+│       │   │   ├── 📄 page-login.jsx
+│       │   │   ├── 📄 page-metrics.jsx
 │       │   │   ├── 📄 page-optimization-debug.jsx
-│       │   │   └── 📄 page-sys-info.jsx
+│       │   │   ├── 📄 page-profile.jsx
+│       │   │   ├── 📄 page-settings.jsx
+│       │   │   ├── 📄 page-sys-info.jsx
+│       │   │   └── 📄 page-users.jsx
 │       │   ├── 🎨 App.css
 │       │   ├── 📄 App.jsx
 │       │   ├── 🎨 index.css
@@ -103,7 +145,6 @@ The default high-level architecture for which this EMS is built is depicted on t
 │       ├── 📄 tailwind.config.js
 │       └── 📄 vite.config.js
 ├── ⚙️ .gitignore
-├── 📝 CODE_OF_CONDUCT.md
 ├── 📝 LICENSE.md
 ├── 📝 README.md
 └── 📄 ems-launcher.bat <-------------------- Batch script used for launching the system

@@ -13,60 +13,70 @@ Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
+limitations under the License.
 
-File: App.jsx
-Description: # TODO: Add desc
+@File: App.jsx
+@Description: # TODO: Add desc
 
-Created: 1st January 2025
-Last Modified: 3rd February 2026
-Version: v1.2.0
+@Created: 1st January 2025
+@Last Modified: 18 February 2026
+@Author: LeonGritsyuk-eaton
+
+@Version: v2.0.0
 */
 
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { useAuth } from '@/context/AuthContext';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import LoginPage from '@/pages/page-login';
 import React from "react"
 import Layout from './components/Layout'
 import Home from './pages/page-home'
 import Charts from './pages/page-charts'
-import DevicesLayout from "./components/DevicesLayout"
-import SolarPanels from "./pages/device-solar-panels"
-import OtherLoads from "./pages/device-load"
-import UnidirectionalChargerDashboard from './pages/device-unidir-ev-charger'
-import BidirectionalChargerDashboard from './pages/device-bidir-ev-charger'
-import StorageSystems from "./pages/device-energy-storage-system"
-import ActiveFrontend from "./pages/device-active-front-end"
 import DroopCurves from "./pages/page-droop-curves"
 import SystemInfo from './pages/page-sys-info'
-import ConfigPage from './pages/page-config'
-import ModbusConfigPage from './pages/page-modbus-config'
 import EMSDashboard from './pages/page-ems-dashboard'
 import EMSDebugPage from './pages/page-optimization-debug'
+import SettingsPage from './pages/page-settings'
+import DeviceDynamicPage from './pages/page-device-dynamic'
+import MetricsDashboard from './pages/page-metrics'
+import PageUsers   from '@/pages/page-users'
+import PageProfile from '@/pages/page-profile'
 
-function App() {
+
+export default function App() {
+  const { user, loading } = useAuth();
+
+  if (loading) return null;
+
   return (
-    <Router>
+    <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Layout />}>
+        {/* Public */}
+        <Route
+          path="/login"
+          element={user ? <Navigate to="/" replace /> : <LoginPage />}
+        />
+
+        {/* All authenticated users */}
+        <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route index element={<Home />} />
-          <Route path="charts" element={<Charts />} />
+          <Route path="charts"   element={<Charts />} />
+          <Route path="metrics"  element={<MetricsDashboard />} />
           <Route path="emsdashboard" element={<EMSDashboard />} />
-          <Route path="droopcurves" element={<DroopCurves />}/>
-          <Route path="/devices" element={<DevicesLayout />}>
-            <Route path="solarpanels" element={<SolarPanels />} />
-            <Route path="otherloads" element={<OtherLoads />} />
-            <Route path="unidirev" element={<UnidirectionalChargerDashboard />} />
-            <Route path="bidirev" element={<BidirectionalChargerDashboard />} />
-            <Route path="storagesystems" element={<StorageSystems />} />
-            <Route path="activefrontend" element={<ActiveFrontend />} />
-          </Route>
-          <Route path="systeminfo" element={<SystemInfo />} />
-          <Route path="siteconfig" element={<ConfigPage />} />
-          <Route path="modbus" element={<ModbusConfigPage />} />
+          <Route path="droopcurves"  element={<DroopCurves />} />
+          <Route path="device/:assetKey" element={<DeviceDynamicPage />} />
           <Route path="debug/optimization" element={<EMSDebugPage />} />
-        </Route>
+
+          <Route path="settings"   element={<ProtectedRoute role="maintainer"><SettingsPage /></ProtectedRoute>} />
+          <Route path="systeminfo" element={<ProtectedRoute role="maintainer"><SystemInfo /></ProtectedRoute>} />
+          <Route path="users"      element={<ProtectedRoute role="maintainer"><PageUsers /></ProtectedRoute>} />
+          <Route path="profile"    element={<ProtectedRoute><PageProfile /></ProtectedRoute>} />
+        </Route>  {/* ← Layout wrapper closes here, after all children */}
+
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </Router>
-  )
+    </BrowserRouter>
+  );
 }
-
-export default App
-

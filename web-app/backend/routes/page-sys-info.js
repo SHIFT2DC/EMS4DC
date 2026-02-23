@@ -13,17 +13,20 @@ Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
+limitations under the License.
 
-File: page-sys-info.js
-Description: # TODO: Add desc
+@File: page-sys-info.js
+@Description: # TODO: Add desc
 
-Created: 24th November 2025
-Last Modified: 3rd February 2026
-Version: v1.2.0
+@Created: 24th November 2025
+@Last Modified: 19 February 2026
+@Author: LeonGritsyuk-eaton
+
+@Version: v2.0.0
 */
 
-import express from '../../frontend/node_modules/express/index.js';
-import si from '../../frontend/node_modules/systeminformation/lib/index.js';
+import express from 'express';
+import si from 'systeminformation';
 
 const router = express.Router();
 

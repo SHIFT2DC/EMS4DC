@@ -12,13 +12,16 @@
 ::  distributed under the License is distributed on an "AS IS" BASIS,
 ::  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 ::  See the License for the specific language governing permissions and
+::  limitations under the License.
 :: 
-::  File: ems-launcher.bat
-::  Description: # TODO: Add desc
+:: @File: ems-launcher.bat
+:: @Description: # TODO: Add desc
 ::
-::  Created: 1st January 2025
-::  Last Modified: 3rd February 2026
-::  Version: v1.2.0
+:: @Created: 1st January 2025
+:: @Last Modified: 23 February 2026
+:: @Author: LeonGritsyuk-eaton
+:: 
+:: @Version: v2.0.0
 
 
 @echo off
@@ -96,28 +99,43 @@ echo %GREEN%All prerequisites found!%RESET%
 echo.
 
 :: Start PostgreSQL
-echo %BOLD%%BLUE%[1/4] Starting PostgreSQL server...%RESET%
-start "PostgreSQL Server" cmd /k "echo %MAGENTA%PostgreSQL Server%RESET% && pg_ctl.exe start -D "C:\Users\E0786730\Documents\1_SHIFT2DC\1_1_EMS Data" && echo %GREEN%PostgreSQL started successfully!%RESET%"
+echo %BOLD%%BLUE%[1/7] Starting PostgreSQL server...%RESET%
+start "PostgreSQL Server" cmd /k "echo %MAGENTA%PostgreSQL Server%RESET% && pg_ctl.exe start -D "C:\Users\YOUR_USER\Documents\1_SHIFT2DC\1_1_EMS Data" && echo %GREEN%PostgreSQL started successfully!%RESET%"
 timeout /t 3 /nobreak >nul
 
 :: Start Frontend Server
-echo %BOLD%%BLUE%[2/4] Starting Frontend server...%RESET%
+echo %BOLD%%BLUE%[2/7] Starting Frontend server...%RESET%
 cd "web-app/frontend"
 start "Frontend Server" cmd /k "echo %MAGENTA%Frontend Server%RESET% && npm run dev && echo %GREEN%Frontend server started!%RESET%"
 timeout /t 2 /nobreak >nul
 
 :: Start Backend Server
-echo %BOLD%%BLUE%[3/4] Starting Backend server...%RESET%
+echo %BOLD%%BLUE%[3/7] Starting Backend server...%RESET%
 cd ..\..
 cd "web-app/backend"
 start "Backend Server" cmd /k "echo %MAGENTA%Backend Server%RESET% && node server.js && echo %GREEN%Backend server started!%RESET%"
 timeout /t 2 /nobreak >nul
 
-:: Start Python Coordinator with Virtual Environment
-echo %BOLD%%BLUE%[4/4] Starting Python coordinator...%RESET%
+:: Start Python Optimizer with Virtual Environment
+echo %BOLD%%BLUE%[4/7] Starting Python optimizer...%RESET%
 cd ..\..
-cd "system-coordination"
-start "Python Coordinator" cmd /k "echo %MAGENTA%Python Coordinator%RESET% && sys-coord\Scripts\activate && %PYTHON_CMD% py coordinator.py && echo %GREEN%Python coordinator started!%RESET%"
+cd "core"
+start "Python Optimizer" cmd /k "echo %MAGENTA%Optimizer%RESET% && core-venv\Scripts\activate && %PYTHON_CMD% py optimizer.py && echo %GREEN%Optimizer started!%RESET%"
+timeout /t 2 /nobreak >nul
+
+:: Start Python Measurements Client with Virtual Environment
+echo %BOLD%%BLUE%[5/7] Starting Python measurements client...%RESET%
+start "Python Measurements" cmd /k "echo %MAGENTA%Measurements client%RESET% && core-venv\Scripts\activate && %PYTHON_CMD% py measure.py && echo %GREEN%Measurements client started!%RESET%"
+timeout /t 2 /nobreak >nul
+
+:: Start Python metrics Client with Virtual Environment
+echo %BOLD%%BLUE%[6/7] Starting Python metrics client...%RESET%
+start "Python Metrics" cmd /k "echo %MAGENTA%Metrics client%RESET% && core-venv\Scripts\activate && %PYTHON_CMD% py metrics.py --schedule && echo %GREEN%Metrics client started!%RESET%"
+timeout /t 2 /nobreak >nul
+
+:: Start Python forecasting Client with Virtual Environment
+echo %BOLD%%BLUE%[7/7] Starting Python forecasting client...%RESET%
+start "Python Forecasting" cmd /k "echo %MAGENTA%Forecasting client%RESET% && core-venv\Scripts\activate && %PYTHON_CMD% py forecast.py --mode daemon --forecast-interval 2 --retrain-interval 1 --validation-interval 6 && echo %GREEN%Forecasting client started!%RESET%"
 
 echo.
 echo %BOLD%%GREEN%========================================%RESET%
@@ -128,7 +146,10 @@ echo %CYAN%Services running:%RESET%
 echo %WHITE%- PostgreSQL Server%RESET%
 echo %WHITE%- Frontend React Server%RESET%
 echo %WHITE%- Backend Server%RESET%
-echo %WHITE%- Python Coordinator (in venv)%RESET%
+echo %WHITE%- Python optimizer client%RESET%
+echo %WHITE%- Python measurements client%RESET%
+echo %WHITE%- Python metrics client%RESET%
+echo %WHITE%- Python forecasting client%RESET%
 echo.
 echo %YELLOW%Press any key to exit launcher (services will continue running)...%RESET%
 pause >nul

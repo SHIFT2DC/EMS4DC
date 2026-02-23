@@ -13,13 +13,16 @@ Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
+limitations under the License.
 
-File: page-optimization-debug.jsx
-Description: # TODO: Add desc
+@File: page-optimization-debug.jsx
+@Description: # TODO: Add desc
 
-Created: 1st January 2025
-Last Modified: 3rd February 2026
-Version: v1.2.0
+@Created: 1st January 2025
+@Last Modified: 16 February 2026
+@Author: LeonGritsyuk-eaton
+
+@Version: v2.0.0
 */
 
 import { useState, useEffect } from "react"

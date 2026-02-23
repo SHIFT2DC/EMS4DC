@@ -13,8 +13,11 @@ dist-ssr
 *.local
 
 __pycache__/
-sys-coord/
-
+core-venv/
+core/optimization/test_multi_device.py
+core/optimization/example_usage.py
+core/metrics_utils/metrics_schema.sql
+core/forecast_utils/schema_forecasts.sql
 .env
 
 # Editor directories and files
@@ -29,10 +32,3 @@ sys-coord/
 *.sw?
 
 web-app/frontend/src/components/ui
-
-system-coordination/__pycache__/fetchDatabase.cpython-312.pyc
-system-coordination/__pycache__/fetchDatabase.cpython-313.pyc
-system-coordination/__pycache__/optimizerMode.cpython-312.pyc
-system-coordination/__pycache__/optimizerMode.cpython-313.pyc
-system-coordination/__pycache__/time_utils.cpython-312.pyc
-system-coordination/__pycache__/time_utils.cpython-313.pyc

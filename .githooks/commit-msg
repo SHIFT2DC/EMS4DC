@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -e
+
+MSG=$(cat "$1")
+
+if [[ "$MSG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    python .githooks/scripts/update_version.py "$MSG"
+    git add .
+    touch .git/PENDING_VERSION_AMEND
+fi

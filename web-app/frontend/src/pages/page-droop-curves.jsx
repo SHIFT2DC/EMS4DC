@@ -13,14 +13,18 @@ Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
+limitations under the License.
 
-File: page-droop-curves.jsx
-Description: # TODO: Add desc
+@File: page-droop-curves.jsx
+@Description: # TODO: Add desc
 
-Created: 1st January 2025
-Last Modified: 3rd February 2026
-Version: v1.2.0
+@Created: 1st January 2025
+@Last Modified: 18 February 2026
+@Author: LeonGritsyuk-eaton
+
+@Version: v2.0.0
 */
+
 
 import { useEffect, useState } from "react"
 import { Line } from "react-chartjs-2"
@@ -31,29 +35,29 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Save, RefreshCw, AlertCircle } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Skeleton } from "@/components/ui/skeleton"
+import api from "@/lib/axios"
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend)
 
-const BASE_URL = import.meta.env.VITE_BASE_URL || "http://localhost:3001"
-const API_URL = `${BASE_URL}/api/droop-curve`
-
 // LUT DEFINITIONS - Define how to build LUT tables for each device
 const LUT_DEFINITIONS = {
-  AFE: {
+  afe1: {
+    assetType: "AFE",
+    assetKey: "afe1",
     axes: {
       x: { label: "Power", unit: "W" },
       y: { label: "Voltage", unit: "V" }
     },
-    // Function that takes modbus data and returns LUT points
     buildLUT: (modbusData) => {
-      const FW_VOLT_OFST = modbusData.AFE_FW_VOLT_OFST || 0
-      const FW_VOLT_DELTA = modbusData.AFE_FW_VOLT_DELTA || 0
-      const FW_P_MAX = modbusData.AFE_FW_P_MAX || 0
-      const RE_VOLT_OFST = modbusData.AFE_RE_VOLT_OFST || 0
-      const RE_VOLT_DELTA = modbusData.AFE_RE_VOLT_DELTA || 0
-      const RE_P_MAX = modbusData.AFE_RE_P_MAX || 0
-      const VOLT_OFST = modbusData.AFE_VOLT_OFST || 0
-      
+      const FW_VOLT_OFST  = modbusData.afe1_FW_VOLT_OFST  || 0
+      const FW_VOLT_DELTA = modbusData.afe1_FW_VOLT_DELTA || 0
+      const FW_P_MAX      = modbusData.afe1_FW_P_MAX      || 0
+      const RE_VOLT_OFST  = modbusData.afe1_RE_VOLT_OFST  || 0
+      const RE_VOLT_DELTA = modbusData.afe1_RE_VOLT_DELTA || 0
+      const RE_P_MAX      = modbusData.afe1_RE_P_MAX      || 0
+      const VOLT_OFST     = modbusData.afe1_VOLT_OFST     || 0
+
       return [
         {
           index: 0,
@@ -85,89 +89,93 @@ const LUT_DEFINITIONS = {
         }
       ]
     },
-    // Parameters needed from modbus
+    // Parameters needed from modbus (without assetKey prefix)
     requiredParams: ["FW_VOLT_OFST", "FW_VOLT_DELTA", "FW_P_MAX", "RE_VOLT_OFST", "RE_VOLT_DELTA", "RE_P_MAX", "VOLT_OFST"]
   },
-  
-  PV: {
+
+  pv1: {
+    assetType: "PV",
+    assetKey: "pv1",
     axes: {
       x: { label: "Power", unit: "W" },
       y: { label: "Voltage", unit: "V" }
     },
     buildLUT: (modbusData) => {
-      const V_NOM = modbusData.PV_V_NOM || 700
-      const P_MAX = modbusData.PV_P_MAX || 40000
-      const V_DROOP = modbusData.PV_V_DROOP || 35
-      
+      const V_NOM  = modbusData.pv1_V_NOM  || 700
+      const P_MAX  = modbusData.pv1_P_MAX  || 40000
+      const V_DROOP = modbusData.pv1_V_DROOP || 35
+
       return [
         {
           index: 0,
           x: -P_MAX,
           y: V_NOM + V_DROOP,
-          x_param: "PV_P_MAX (negated)",
-          y_param: "PV_V_NOM + PV_V_DROOP"
+          x_param: "P_MAX (negated)",
+          y_param: "V_NOM + V_DROOP"
         },
         {
           index: 1,
           x: 0,
           y: V_NOM,
           x_param: "0",
-          y_param: "PV_V_NOM"
+          y_param: "V_NOM"
         },
         {
           index: 2,
           x: P_MAX,
           y: V_NOM - V_DROOP,
-          x_param: "PV_P_MAX",
-          y_param: "PV_V_NOM - PV_V_DROOP"
+          x_param: "P_MAX",
+          y_param: "V_NOM - V_DROOP"
         }
       ]
     },
     requiredParams: ["V_NOM", "P_MAX", "V_DROOP"]
   },
-  
-  BESS: {
+
+  bess1: {
+    assetType: "BESS",
+    assetKey: "bess1",
     axes: {
       x: { label: "Power", unit: "W" },
       y: { label: "Voltage", unit: "V" }
     },
     buildLUT: (modbusData) => {
-      const CHARGE_P = modbusData.BESS_CHARGE_P || 0
-      const DISCHARGE_P = modbusData.BESS_DISCHARGE_P || 0
-      const SOC_0_CHAR_V = modbusData.BESS_SOC_0_CHAR_V || 0
-      const SOC_0_DISCH_V = modbusData.BESS_SOC_0_DISCH_V || 0
-      const SOC_100_CHAR_V = modbusData.BESS_SOC_100_CHAR_V || 0
-      const SOC_100_DISCH_V = modbusData.BESS_SOC_100_DISCH_V || 0
-      const CONV_OFST = modbusData.BESS_CONV_OFST || 0
-      
+      const CHARGE_P      = modbusData.bess1_CHARGE_P      || 0
+      const DISCHARGE_P   = modbusData.bess1_DISCHARGE_P   || 0
+      const SOC_0_CHAR_V  = modbusData.bess1_SOC_0_CHAR_V  || 0
+      const SOC_0_DISCH_V = modbusData.bess1_SOC_0_DISCH_V || 0
+      const SOC_100_CHAR_V  = modbusData.bess1_SOC_100_CHAR_V  || 0
+      const SOC_100_DISCH_V = modbusData.bess1_SOC_100_DISCH_V || 0
+      const CONV_OFST     = modbusData.bess1_CONV_OFST     || 0
+
       return [
         {
           index: 0,
           x: CHARGE_P,
           y: SOC_0_CHAR_V + 25,
-          x_param: "BESS_CHARGE_P",
-          y_param: "BESS_SOC_0_CHAR_V + 25"
+          x_param: "CHARGE_P",
+          y_param: "SOC_0_CHAR_V + 25"
         },
         {
           index: 1,
           x: 0,
           y: SOC_0_CHAR_V,
           x_param: "0",
-          y_param: "BESS_SOC_0_CHAR_V"
+          y_param: "SOC_0_CHAR_V"
         },
         {
           index: 2,
           x: 0,
           y: SOC_0_DISCH_V,
           x_param: "0",
-          y_param: "BESS_SOC_0_DISCH_V"
+          y_param: "SOC_0_DISCH_V"
         },
         {
           index: 3,
           x: -DISCHARGE_P,
           y: SOC_0_DISCH_V - 25,
-          x_param: "-BESS_DISCHARGE_P (negated)",
-          y_param: "BESS_SOC_0_DISCH_V - 25"
+          x_param: "-DISCHARGE_P (negated)",
+          y_param: "SOC_0_DISCH_V - 25"
         },
       ]
     },
@@ -198,33 +206,32 @@ const DroopCurveLUT = () => {
     }
   }, [activeDevice])
 
-  const fetchDroopLUT = async (deviceName) => {
+  const fetchDroopLUT = async (deviceKey) => {
     setLoading(true)
     setError(null)
     try {
-      // Fetch all modbus data
-      const response = await fetch(`${API_URL}/modbus-data`)
-      if (!response.ok) throw new Error(`HTTP ${response.status}`)
-      const data = await response.json()
-      
+      const { data } = await api.get('/api/droop-curve/modbus-data')
+
       setModbusData(data)
-      
+
       // Build LUT using the device's definition
-      const lutDef = LUT_DEFINITIONS[deviceName]
+      const lutDef = LUT_DEFINITIONS[deviceKey]
       if (!lutDef) {
-        throw new Error(`No LUT definition for device ${deviceName}`)
+        throw new Error(`No LUT definition for device ${deviceKey}`)
       }
-      
+
       const points = lutDef.buildLUT(data)
-      
+
       setCurveData({
-        device: deviceName,
+        deviceKey,
+        assetType: lutDef.assetType,
+        assetKey: lutDef.assetKey,
         axes: lutDef.axes,
-        points: points,
+        points,
         requiredParams: lutDef.requiredParams
       })
     } catch (err) {
-      setError(`Failed to load LUT for ${deviceName}: ${err.message}`)
+      setError(`Failed to load LUT for ${deviceKey}: ${err.message}`)
       console.error("Error fetching droop LUT:", err)
     } finally {
       setLoading(false)
@@ -241,17 +248,51 @@ const DroopCurveLUT = () => {
     )
   }
 
-  if (!curveData) {
-    return (
-      <div className="p-8 text-center">
-        <div className="animate-pulse text-gray-500">Loading droop curves...</div>
+  const LoadingSkeleton = () => (
+    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+      <div className="flex justify-between items-center">
+        <div className="space-y-2">
+          <Skeleton className="h-9 w-80" />
+          <Skeleton className="h-5 w-96" />
+        </div>
+        <Skeleton className="h-10 w-24" />
       </div>
-    )
+
+      <div className="space-y-4">
+        <Skeleton className="h-10 w-full max-w-md" />
+
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-8 w-64" />
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Chart skeleton */}
+            <Skeleton className="h-96 w-full" />
+
+            {/* Table skeleton */}
+            <div className="space-y-4">
+              <Skeleton className="h-7 w-48" />
+              <div className="space-y-3">
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" />
+              </div>
+            </div>
+            <Skeleton className="h-32 w-full" />
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
+
+  if (!curveData || loading) {
+    return <LoadingSkeleton />
   }
 
   const chartData = {
     datasets: [{
-      label: `${activeDevice} Droop Curve`,
+      label: `${curveData.assetType} (${curveData.assetKey}) Droop Curve`,
       data: curveData.points.map(p => ({ x: p.x, y: p.y })),
       borderColor: '#3B82F6',
       backgroundColor: 'rgba(59, 130, 246, 0.1)',
@@ -310,6 +351,12 @@ const DroopCurveLUT = () => {
     }
   }
 
+  // Get display label for tab
+  const getDeviceLabel = (deviceKey) => {
+    const def = LUT_DEFINITIONS[deviceKey]
+    return `${def.assetType} (${def.assetKey})`
+  }
+
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
       <div className="flex justify-between items-center">
@@ -317,7 +364,7 @@ const DroopCurveLUT = () => {
           <h1 className="text-3xl font-bold">Droop Curve Configuration</h1>
           <p className="text-gray-500 mt-1">View device droop curves calculated from Modbus parameters</p>
         </div>
-        <Button 
+        <Button
           onClick={() => fetchDroopLUT(activeDevice)}
           variant="outline"
           disabled={loading}
@@ -330,122 +377,151 @@ const DroopCurveLUT = () => {
 
       <Tabs value={activeDevice} onValueChange={setActiveDevice}>
         <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid">
-          {devices.map(device => (
-            <TabsTrigger key={device} value={device}>
-              {device}
+          {devices.map(deviceKey => (
+            <TabsTrigger key={deviceKey} value={deviceKey}>
+              {getDeviceLabel(deviceKey)}
             </TabsTrigger>
           ))}
         </TabsList>
 
-        {devices.map(device => (
-          <TabsContent key={device} value={device}>
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span>{device} Droop Curve</span>
-                  <span className="text-sm font-normal text-gray-500">
-                    {curveData.points.length} points
-                  </span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Chart */}
-                <div className="h-96 bg-gray-50 rounded-lg p-4">
-                  <Line data={chartData} options={chartOptions} />
-                </div>
+        {devices.map(deviceKey => (
+          <TabsContent key={deviceKey} value={deviceKey}>
+            {loading ? (
+              <Card>
+                <CardHeader>
+                  <Skeleton className="h-8 w-64" />
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Chart skeleton */}
+                  <Skeleton className="h-96 w-full" />
 
-                {/* LUT Table */}
-                <div className="space-y-4">
-                  <h3 className="font-semibold text-lg">Calculated Points</h3>
-
-                  <div className="border rounded-lg overflow-hidden">
-                    <table className="w-full">
-                      <thead className="bg-gray-100 border-b">
-                        <tr>
-                          <th className="p-3 text-left font-semibold">#</th>
-                          <th className="p-3 text-left font-semibold">
-                            {curveData.axes.x.label} ({curveData.axes.x.unit})
-                          </th>
-                          <th className="p-3 text-left font-semibold">Formula</th>
-                          <th className="p-3 text-left font-semibold">
-                            {curveData.axes.y.label} ({curveData.axes.y.unit})
-                          </th>
-                          <th className="p-3 text-left font-semibold">Formula</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {curveData.points.map((point, idx) => (
-                          <tr 
-                            key={idx} 
-                            className={`border-b last:border-b-0 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
-                          >
-                            <td className="p-3 font-medium text-gray-600">{idx + 1}</td>
-                            <td className="p-3">
-                              <span className="font-mono text-lg font-semibold text-blue-600">
-                                {point.x.toFixed(2)}
-                              </span>
-                            </td>
-                            <td className="p-3">
-                              <code className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded">
-                                {point.x_param}
-                              </code>
-                            </td>
-                            <td className="p-3">
-                              <span className="font-mono text-lg font-semibold text-green-600">
-                                {point.y.toFixed(2)}
-                              </span>
-                            </td>
-                            <td className="p-3">
-                              <code className="text-xs bg-green-50 text-green-700 px-2 py-1 rounded">
-                                {point.y_param}
-                              </code>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* Show required Modbus parameters */}
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <h4 className="font-semibold text-blue-900 mb-2">Required Modbus Parameters</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {curveData.requiredParams.map(param => (
-                        <code key={param} className="text-sm bg-white text-blue-700 px-3 py-1 rounded border border-blue-300">
-                          {activeDevice}_{param}
-                        </code>
-                      ))}
+                  {/* Table skeleton */}
+                  <div className="space-y-4">
+                    <Skeleton className="h-7 w-48" />
+                    <div className="space-y-3">
+                      <Skeleton className="h-12 w-full" />
+                      <Skeleton className="h-16 w-full" />
+                      <Skeleton className="h-16 w-full" />
+                      <Skeleton className="h-16 w-full" />
                     </div>
-                    <p className="text-sm text-blue-800 mt-3">
-                      <strong>Note:</strong> These parameters are read from Modbus and used to calculate the droop curve points above.
-                    </p>
+                  </div>
+                  <Skeleton className="h-32 w-full" />
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <div>
+                      <span className="text-2xl">{LUT_DEFINITIONS[deviceKey].assetType} Droop Curve</span>
+                      <span className="text-sm font-normal text-gray-500 ml-3">
+                        Asset Key: {LUT_DEFINITIONS[deviceKey].assetKey}
+                      </span>
+                    </div>
+                    <span className="text-sm font-normal text-gray-500">
+                      {curveData.points.length} points
+                    </span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Chart */}
+                  <div className="h-96 bg-gray-50 rounded-lg p-4">
+                    <Line data={chartData} options={chartOptions} />
                   </div>
 
-                  {/* Show raw modbus values */}
-                  {modbusData && (
-                    <details className="bg-gray-50 border rounded-lg p-4">
-                      <summary className="cursor-pointer font-semibold text-gray-700">
-                        Show Raw Modbus Values
-                      </summary>
-                      <div className="mt-3 space-y-1">
-                        {curveData.requiredParams.map(param => {
-                          const key = `${activeDevice}_${param}`
-                          const value = modbusData[key]
-                          return (
-                            <div key={param} className="flex justify-between font-mono text-sm">
-                              <span className="text-gray-600">{key}:</span>
-                              <span className="text-gray-900 font-semibold">
-                                {value !== undefined ? value : 'N/A'}
-                              </span>
-                            </div>
-                          )
-                        })}
+                  {/* LUT Table */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-lg">Calculated Points</h3>
+
+                    <div className="border rounded-lg overflow-hidden">
+                      <table className="w-full">
+                        <thead className="bg-gray-100 border-b">
+                          <tr>
+                            <th className="p-3 text-left font-semibold">#</th>
+                            <th className="p-3 text-left font-semibold">
+                              {curveData.axes.x.label} ({curveData.axes.x.unit})
+                            </th>
+                            <th className="p-3 text-left font-semibold">Formula</th>
+                            <th className="p-3 text-left font-semibold">
+                              {curveData.axes.y.label} ({curveData.axes.y.unit})
+                            </th>
+                            <th className="p-3 text-left font-semibold">Formula</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {curveData.points.map((point, idx) => (
+                            <tr
+                              key={idx}
+                              className={`border-b last:border-b-0 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
+                            >
+                              <td className="p-3 font-medium text-gray-600">{idx + 1}</td>
+                              <td className="p-3">
+                                <span className="font-mono text-lg font-semibold text-blue-600">
+                                  {point.x.toFixed(2)}
+                                </span>
+                              </td>
+                              <td className="p-3">
+                                <code className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded">
+                                  {point.x_param}
+                                </code>
+                              </td>
+                              <td className="p-3">
+                                <span className="font-mono text-lg font-semibold text-green-600">
+                                  {point.y.toFixed(2)}
+                                </span>
+                              </td>
+                              <td className="p-3">
+                                <code className="text-xs bg-green-50 text-green-700 px-2 py-1 rounded">
+                                  {point.y_param}
+                                </code>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Show required Modbus parameters */}
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <h4 className="font-semibold text-blue-900 mb-2">Required Modbus Parameters</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {curveData.requiredParams.map(param => (
+                          <code key={param} className="text-sm bg-white text-blue-700 px-3 py-1 rounded border border-blue-300">
+                            {curveData.assetKey}_{param}
+                          </code>
+                        ))}
                       </div>
-                    </details>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+                      <p className="text-sm text-blue-800 mt-3">
+                        <strong>Note:</strong> These parameters are read from Modbus and used to calculate the droop curve points above.
+                      </p>
+                    </div>
+
+                    {/* Show raw modbus values */}
+                    {modbusData && (
+                      <details className="bg-gray-50 border rounded-lg p-4">
+                        <summary className="cursor-pointer font-semibold text-gray-700">
+                          Show Raw Modbus Values
+                        </summary>
+                        <div className="mt-3 space-y-1">
+                          {curveData.requiredParams.map(param => {
+                            const key = `${curveData.assetKey}_${param}`
+                            const value = modbusData[key]
+                            return (
+                              <div key={param} className="flex justify-between font-mono text-sm">
+                                <span className="text-gray-600">{key}:</span>
+                                <span className="text-gray-900 font-semibold">
+                                  {value !== undefined ? value : 'N/A'}
+                                </span>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </details>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
         ))}
       </Tabs>

@@ -13,20 +13,25 @@ Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
+limitations under the License.
 
-File: page-sys-info.jsx
-Description: # TODO: Add desc
+@File: page-sys-info.jsx
+@Description: # TODO: Add desc
 
-Created: 1st January 2025
-Last Modified: 3rd February 2026
-Version: v1.2.0
+@Created: 1st January 2025
+@Last Modified: 18 February 2026
+@Author: LeonGritsyuk-eaton
+
+@Version: v2.0.0
 */
+
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle, Battery, Cpu, HardDrive, Thermometer } from 'lucide-react';
+import api from '@/lib/axios';
 
 export default function SystemInfo() {
   const [systemInfo, setSystemInfo] = useState(null);
@@ -35,22 +40,17 @@ export default function SystemInfo() {
   useEffect(() => {
     const fetchSystemInfo = async () => {
       try {
-        const API_BASE_URL = import.meta.env.VITE_BASE_URL || "http://localhost:3001"
-        const response = await fetch(`${API_BASE_URL}/api/system-info`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch system information');
-        }
-        const data = await response.json();
+        const { data } = await api.get('/api/system-info');
         setSystemInfo(data);
+        setError(null);
       } catch (err) {
         console.error('Error fetching system info:', err);
-        setError(err.message);
+        setError(err.response?.data?.message ?? err.message);
       }
     };
 
     fetchSystemInfo();
-    const interval = setInterval(fetchSystemInfo, 5000); // Refresh every 5 seconds
-
+    const interval = setInterval(fetchSystemInfo, 5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -98,13 +98,13 @@ export default function SystemInfo() {
     return (
       <CardContent className="space-y-6">
         <div className="grid grid-cols-2 gap-4">
-          <InfoItem icon={HardDrive} label="OS" value={`${systemInfo.os.distro} ${systemInfo.os.release}`} />
-          <InfoItem icon={Cpu} label="CPU" value={systemInfo.cpu.brand} />
-          <InfoItem icon={Cpu} label="Cores" value={`${systemInfo.cpu.physicalCores} (${systemInfo.cpu.cores})`} />
-          <InfoItem 
-            icon={Thermometer} 
-            label="CPU Temp" 
-            value={systemInfo.cpuTemp !== null ? `${systemInfo.cpuTemp.toFixed(1)}°C` : 'N/A'} 
+          <InfoItem icon={HardDrive}   label="OS"       value={`${systemInfo.os.distro} ${systemInfo.os.release}`} />
+          <InfoItem icon={Cpu}         label="CPU"      value={systemInfo.cpu.brand} />
+          <InfoItem icon={Cpu}         label="Cores"    value={`${systemInfo.cpu.physicalCores} (${systemInfo.cpu.cores})`} />
+          <InfoItem
+            icon={Thermometer}
+            label="CPU Temp"
+            value={systemInfo.cpuTemp !== null ? `${systemInfo.cpuTemp.toFixed(1)}°C` : 'N/A'}
           />
         </div>
 
@@ -127,9 +127,7 @@ export default function SystemInfo() {
           <h3 className="text-lg font-semibold">Memory Usage</h3>
           <div className="flex justify-between text-sm text-muted-foreground">
             <span>Used</span>
-            <span>
-              {systemInfo.memoryUsage.used} / {systemInfo.memoryUsage.total} GB
-            </span>
+            <span>{systemInfo.memoryUsage.used} / {systemInfo.memoryUsage.total} GB</span>
           </div>
           <Progress
             value={(systemInfo.memoryUsage.used / systemInfo.memoryUsage.total) * 100}

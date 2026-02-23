@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -e
+
+FLAG=".git/PENDING_VERSION_AMEND"
+
+if [ -f "$FLAG" ]; then
+    rm "$FLAG"                          # remove BEFORE amending to break the loop
+    git commit --amend --no-edit --no-verify
+fi

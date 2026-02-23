@@ -13,17 +13,21 @@ Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
+limitations under the License.
 
-File: page-charts.js
-Description: # TODO: Add desc
+@File: page-charts.js
+@Description: # TODO: Add desc
 
-Created: 24th November 2025
-Last Modified: 3rd February 2026
-Version: v1.2.0
+@Created: 24th November 2025
+@Last Modified: 19 February 2026
+@Author: LeonGritsyuk-eaton
+
+@Version: v2.0.0
 */
 
+
 import { pool } from '../db/pool.js';
-import express from '../../frontend/node_modules/express/index.js';
+import express from 'express';
 
 const router = express.Router();
 
@@ -38,53 +42,105 @@ router.get("/", async (req, res) => {
   try {
     const client = await pool.connect();
 
-    // Query for hourly averages for multiple key tags
-    const result = await client.query(
+    // First, get all active assets
+    const assetsResult = await client.query(
+      `SELECT asset_key, name, type FROM assets WHERE is_active = true ORDER BY asset_key`
+    );
+
+    const activeAssets = assetsResult.rows;
+
+    if (activeAssets.length === 0) {
+      client.release();
+      return res.status(200).json({ chartData: [], assets: [] });
+    }
+
+    // Build parameter names for the query
+    const parameterNames = activeAssets.map(asset => `${asset.asset_key}_POWER`);
+    const assetKeys = activeAssets.map(asset => asset.asset_key);
+
+    // Query for hourly averages for all active assets (historical data)
+    const measurementsResult = await client.query(
       `
       SELECT 
         EXTRACT(HOUR FROM "time") AS hour,
-        "measurement_id",
+        "parameter",
         AVG("value") AS average_value
       FROM "measurements"
-      WHERE "measurement_id" = ANY($2)
+      WHERE "parameter" = ANY($2)
         AND "time" >= $1::date
         AND "time" < ($1::date + INTERVAL '1 day')
         AND "quality" = 'ok'
-      GROUP BY EXTRACT(HOUR FROM "time"), "measurement_id"
-      ORDER BY hour, "measurement_id";
+      GROUP BY EXTRACT(HOUR FROM "time"), "parameter"
+      ORDER BY hour, "parameter";
       `,
-      [date, [1, 10, 12, 23, 22, 28]]
+      [date, parameterNames]
+    );
+
+    // Query for forecasts for all active assets
+    const forecastsResult = await client.query(
+      `
+      SELECT 
+        asset_key,
+        EXTRACT(HOUR FROM horizon_timestamp) AS hour,
+        predicted_power
+      FROM forecasts
+      WHERE asset_key = ANY($2)
+        AND horizon_timestamp >= $1::date
+        AND horizon_timestamp < ($1::date + INTERVAL '1 day')
+      ORDER BY asset_key, hour;
+      `,
+      [date, assetKeys]
     );
 
     client.release();
 
-    // Map data into a structure suitable for the frontend
-    const keyTagRules = {
-      1: { title: "PV Power" },
-      10: { title: "Battery Power" },
-      12: { title: "Active Front End Power" },
-      23: { title: "Unidirectional Charger"},
-      22: { title: "Load Power" },
-      28: { title: "Bidirectional EV Charger"}
-    };
+    // Create a mapping from parameter to asset name and asset_key
+    const parameterToAssetName = {};
+    const assetKeyToName = {};
+    activeAssets.forEach(asset => {
+      parameterToAssetName[`${asset.asset_key}_POWER`] = asset.name;
+      assetKeyToName[asset.asset_key] = asset.name;
+    });
 
     const chartData = {};
 
-    result.rows.forEach((row) => {
+    // Process historical measurements
+    measurementsResult.rows.forEach((row) => {
       const hour = `${row.hour}:00`;
-      const title = keyTagRules[row.measurement_id]?.title;
+      const assetName = parameterToAssetName[row.parameter];
 
       if (!chartData[hour]) {
         chartData[hour] = { hour };
       }
       // Convert to kilowatts and round to one decimal
-      chartData[hour][title] = Math.round((row.average_value / 1000) * 10) / 10;
+      chartData[hour][assetName] = Math.round((row.average_value / 1000) * 10) / 10;
     });
 
-    // Convert chartData object to array
-    const responseData = Object.values(chartData);
+    // Process forecasts
+    forecastsResult.rows.forEach((row) => {
+      const hour = `${row.hour}:00`;
+      const assetName = assetKeyToName[row.asset_key];
+      const forecastKey = `${assetName} (Forecast)`;
 
-    res.status(200).json(responseData);
+      if (!chartData[hour]) {
+        chartData[hour] = { hour };
+      }
+      
+      // Convert to kilowatts and round to one decimal
+      chartData[hour][forecastKey] = Math.round((row.predicted_power / 1000) * 10) / 10;
+    });
+
+    // Convert chartData object to array and sort by hour
+    const responseData = Object.values(chartData).sort((a, b) => {
+      const hourA = parseInt(a.hour.split(':')[0]);
+      const hourB = parseInt(b.hour.split(':')[0]);
+      return hourA - hourB;
+    });
+
+    res.status(200).json({
+      chartData: responseData,
+      assets: activeAssets
+    });
   } catch (error) {
     console.error("Error querying database:", error);
     res.status(500).json({ error: "Internal server error" });

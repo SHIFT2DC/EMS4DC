@@ -13,17 +13,20 @@ Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
+limitations under the License.
 
-File: page-droop.js
-Description: # TODO: Add desc
+@File: page-droop.js
+@Description: # TODO: Add desc
 
-Created: 24th November 2025
-Last Modified: 3rd February 2026
-Version: v1.2.0
+@Created: 24th November 2025
+@Last Modified: 19 February 2026
+@Author: LeonGritsyuk-eaton
+
+@Version: v2.0.0
 */
 
-import express from '../../frontend/node_modules/express/index.js';
-import path from "path";
+import express from 'express';
+import path from 'path';
 import { promises as fs } from 'fs';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
@@ -41,8 +44,8 @@ const configPath = path.join(__dirname, './../config.json');
 const modbusConfigPath = path.join(__dirname, './../modbus.json');
 
 // Path to Python reader script
-const systemCoordPath = path.join(__dirname, '../../../system-coordination');
-const venvPythonPath = path.join(__dirname, '../../../system-coordination/sys-coord/Scripts/python.exe');
+const systemCoordPath = path.join(__dirname, '../../../core');
+const venvPythonPath = path.join(__dirname, '../../../core/core-venv/Scripts/python.exe');
 
 const router = express.Router();
 

@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -e
+
+AUTHOR=$(git config user.name)
+DATE=$(date "+%d %B %Y")
+
+FILES=$(git diff --cached --name-only --diff-filter=AM)
+
+for file in $FILES; do
+    case "$file" in
+        *.py|*.js|*.jsx|*.bat)
+            python .githooks/scripts/update_headers.py "$file" "$AUTHOR" "$DATE"
+            git add "$file"
+            ;;
+    esac
+done
