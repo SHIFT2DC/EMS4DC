@@ -1,0 +1,9 @@
+{
+  "devices": [
+    
+  ],
+  "generalSiteConfig": {
+    "selectedOperationMode": "droopMode",
+    "objectiveFunction": "maxWeightPowerFlow"
+  }
+}

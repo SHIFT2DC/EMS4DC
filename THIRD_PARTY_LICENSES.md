@@ -54,5 +54,9 @@ This project uses the following third-party packages and libraries:
     - License: MIT License
     - https://github.com/axios/axios/blob/v1.x/LICENSE
 
+14. Flask
+    - License: BSD 3-Clause
+    - https://github.com/pallets/flask/blob/main/LICENSE.txt
+
 
 Please refer to the individual license files of each package for the full license text and terms.

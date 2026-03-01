@@ -19,11 +19,12 @@ limitations under the License.
 @Description: TODO
 
 @Created: 11 February 2026
-@Last Modified: 23 February 2026
+@Last Modified: 01 March 2026
 @Author: Leon Gritsyuk
 
 @Version: v2.0.0
 '''
+
 
 from utils.time_utils import calculate_time_for_execution
 from utils.logging_utils import setup_logging
@@ -136,7 +137,7 @@ if __name__ == "__main__":
     setup_logging()
 
     # Example configuration
-    with open('./../web-app/backend/config.json', 'r') as file:
+    with open('./conf/config.json', 'r') as file:
         config = json.load(file)
     
     coordinator = Coordinator(config)

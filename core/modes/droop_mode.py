@@ -19,7 +19,7 @@ limitations under the License.
 @Description: # TODO: Add desc
 
 @Created: 3rd February 2026
-@Last Modified: 23 February 2026
+@Last Modified: 27 February 2026
 @Author: LeonGritsyuk-eaton
 
 @Version: v2.0.0
@@ -46,7 +46,7 @@ from data.modbus_writer import ModbusWriter
 from utils.database_utils import DatabaseOperations
 from optimization.optimizer import OptimizerRunner
 
-load_dotenv('./../web-app/backend/.env')
+load_dotenv('./conf/.env')
 
 
 # ── USER CONFIGURATION ────────────────────────────────────────────────────────
@@ -93,7 +93,7 @@ class DroopMode:
 
         self.db_ops = DatabaseOperations(db_config, site_config=config)
         self.optimizer = OptimizerRunner(config)
-        self.modbus_writer = ModbusWriter(config_file='./../web-app/backend/modbus.json')
+        self.modbus_writer = ModbusWriter(config_file='./conf/modbus.json')
 
         # Instantiated driver objects keyed by asset_key
         self.drivers: Dict[str, Any] = self._initialize_drivers()

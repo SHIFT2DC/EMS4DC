@@ -30,7 +30,7 @@ limitations under the License.
     python metrics.py --backfill --start "2026-02-01 00:00:00" --end "2026-02-10 00:00:00" --period-hours 1
 
 @Created: 11 February 2026
-@Last Modified: 17 February 2026
+@Last Modified: 27 February 2026
 @Author: Leon Gritsyuk
 
 @Version: v2.0.0
@@ -137,8 +137,8 @@ def main():
     parser.add_argument(
         '--config-dir',
         type=str,
-        default='./../web-app/backend/',
-        help='Directory containing config.json and modbus.json (default: ./../web-app/backend/)'
+        default='./conf/',
+        help='Directory containing config.json and modbus.json (default: ./conf/)'
     )
     
     args = parser.parse_args()

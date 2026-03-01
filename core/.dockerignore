@@ -1,0 +1,3 @@
+core-venv
+.env
+__pycache__

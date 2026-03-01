@@ -19,7 +19,7 @@ limitations under the License.
 @Description: Configuration loader for EMS system.
 
 @Created: 11 February 2026
-@Last Modified: 10 February 2026
+@Last Modified: 27 February 2026
 @Author: Leon Gritsyuk
 
 @Version: v2.0.0
@@ -112,7 +112,7 @@ class ModbusConfig(BaseModel):
 class ConfigLoader:
     """Load and manage EMS configuration files."""
     
-    def __init__(self, config_dir: str = "./../../web-app/backend/"):
+    def __init__(self, config_dir: str = "./conf/"):
         self.config_dir = Path(config_dir)
         self._system_config: Optional[SystemConfig] = None
         self._modbus_config: Optional[ModbusConfig] = None

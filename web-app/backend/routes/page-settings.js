@@ -19,7 +19,7 @@ limitations under the License.
 @Description: # TODO: Add desc
 
 @Created: 1st February 2026
-@Last Modified: 19 February 2026
+@Last Modified: 27 February 2026
 @Author: LeonGritsyuk-eaton
 
 @Version: v2.0.0
@@ -35,8 +35,8 @@ import { promises as fs } from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const configPath = path.join(__dirname, './../config.json');
-const modbusConfigPath = path.join(__dirname, './../modbus.json');
+const configPath = path.join(__dirname, './../conf/config.json');
+const modbusConfigPath = path.join(__dirname, './../conf/modbus.json');
 
 const router = express.Router();
 

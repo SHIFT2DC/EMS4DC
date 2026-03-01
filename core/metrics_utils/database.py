@@ -19,7 +19,7 @@ limitations under the License.
 @Description: Database connection and configuration module for EMS metrics system.
 
 @Created: 11 February 2026
-@Last Modified: 10 February 2026
+@Last Modified: 27 February 2026
 @Author: Leon Gritsyuk
 
 @Version: v2.0.0
@@ -35,7 +35,7 @@ from typing import Optional
 from dotenv import load_dotenv
 import os
 
-load_dotenv('./../web-app/backend/.env')
+load_dotenv('./conf/.env')
 
 DB_USER = os.getenv('DB_USER')
 DB_PASSWORD = os.getenv('DB_PASSWORD')

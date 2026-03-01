@@ -19,21 +19,21 @@ limitations under the License.
 @Description: # TODO: Add desc
 
 @Created: 1st January 2025
-@Last Modified: 18 February 2026
+@Last Modified: 01 March 2026
 @Author: LeonGritsyuk-eaton
 
 @Version: v2.0.0
 */
 
-import express from '../frontend/node_modules/express/index.js';
-import session from '../frontend/node_modules/express-session/index.js';
-import connectPgSession from '../frontend/node_modules/connect-pg-simple/index.js';
+import express from 'express';
+import session from 'express-session';
+import connectPgSession from 'connect-pg-simple';
 const PgSession = connectPgSession(session);
 import passport from './auth/passport.js';
 import { pool } from './db/pool.js';
 import authRouter from './routes/auth.js';
 import { requireAuth, requireMaintainer } from './auth/middleware.js';
-import cors from '../frontend/node_modules/cors/lib/index.js';
+import cors from 'cors';
 
 // Import route modules
 import homePageRoutes from './routes/page-home.js';
@@ -52,8 +52,8 @@ const app = express();
 const port = 3001;
 
 app.use(cors({
-  origin: 'http://127.0.0.1:5173',   // frontend origin exactly
-  credentials: true,                      // allows cookies/session to be sent
+  origin: process.env.FRONTEND_IP,  // frontend origin exactly
+  credentials: true,                // allows cookies/session to be sent
 }));
 app.use(express.json());
 

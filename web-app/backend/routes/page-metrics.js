@@ -19,7 +19,7 @@ limitations under the License.
 @Description: Provides RESTful endpoints to access calculated metrics from PostgreSQL
 
 @Created: 11 February 2026
-@Last Modified: 20 February 2026
+@Last Modified: 01 March 2026
 @Author: Leon Gritsyuk
 
 @Version: v2.0.0

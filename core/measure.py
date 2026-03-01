@@ -19,7 +19,7 @@ limitations under the License.
 @Description: TODO
 
 @Created: 11 February 2026
-@Last Modified: 16 February 2026
+@Last Modified: 27 February 2026
 @Author: Leon Gritsyuk
 
 @Version: v2.0.0
@@ -40,7 +40,7 @@ from contextlib import contextmanager
 from dotenv import load_dotenv
 import os
 
-load_dotenv('./../web-app/backend/.env')
+load_dotenv('./conf/.env')
 
 DB_USER = os.getenv('DB_USER')
 DB_PASSWORD = os.getenv('DB_PASSWORD')
@@ -192,7 +192,7 @@ if __name__ == "__main__":
 
     setup_logging()
 
-    modbus_config_dir = './../web-app/backend/modbus.json'
+    modbus_config_dir = './conf/modbus.json'
 
     measurements_client = MeasurementsManager(
         modbus_config_dir=modbus_config_dir,

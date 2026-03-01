@@ -19,11 +19,12 @@ limitations under the License.
 @Description: Base class for all optimization objectives with multi-asset support
 
 @Created: 6th February 2026
-@Last Modified: 23 February 2026
+@Last Modified: 01 March 2026
 @Author: LeonGritsyuk-eaton
 
 @Version: v2.0.0
 '''
+
 
 import logging
 from typing import Dict, Any, List

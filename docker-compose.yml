@@ -1,0 +1,179 @@
+# docker-compose.yml — Development configuration
+
+name: ems4dc
+
+services:
+
+  # ── PostgreSQL ──────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: ems4dc-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: your_secure_password
+      POSTGRES_DB: ems-db
+    ports:
+      - "5432:5432"
+    volumes:
+      - ems-pgdata:/var/lib/postgresql/data   # Persistent data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql  # Auto-init on first run
+    networks:
+      - ems-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ems-db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── Backend (Express.js) ─────────────────────────────────
+  backend:
+    build:
+      context: ./web-app/backend
+      dockerfile: Dockerfile
+      args:
+        HTTP_PROXY: "http://proxy.your-company.com:8080"
+        HTTPS_PROXY: "http://proxy.your-company.com:8080"
+    container_name: ems4dc-backend
+    restart: unless-stopped
+    env_file: ./conf/.env
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./web-app/backend:/app        # Live source mount for hot-reload
+      - /app/node_modules             # Prevent host node_modules from overwriting
+      - ./conf:/app/conf              # Live source mount for configuration files
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - ems-net
+
+  # ── Frontend (Vite + React) ──────────────────────────────
+  frontend:
+    build:
+      context: ./web-app/frontend
+      dockerfile: Dockerfile
+      args:
+        HTTP_PROXY: "http://proxy.your-company.com:8080"
+        HTTPS_PROXY: "http://proxy.your-company.com:8080"
+    container_name: ems4dc-frontend
+    restart: unless-stopped
+    env_file: ./conf/.env
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./web-app/frontend:/app       # Live source mount for hot-reload
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - ems-net
+
+  # ── Python: Optimizer ───────────────────────────────────
+  py-optimizer:
+    build:
+      context: ./core
+      dockerfile: Dockerfile
+    container_name: ems4dc-optimizer
+    restart: unless-stopped
+    command: ["python", "optimizer.py"]
+    env_file: ./conf/.env  # Shares DB config with backend
+    volumes:
+      - ./core:/app                   # Live source mount
+      - ./conf:/app/conf              # Live source mount for configuration files
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - ems-net
+
+  # ── Python: Measurements ────────────────────────────────
+  py-measurements:
+    build:
+      context: ./core
+      dockerfile: Dockerfile
+    container_name: ems4dc-measurements
+    restart: unless-stopped
+    command: ["python", "measure.py"]
+    env_file: ./conf/.env
+    volumes:
+      - ./core:/app
+      - ./conf:/app/conf              # Live source mount for configuration files
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - ems-net
+
+  # ── Python: Metrics ──────────────────────────────────────
+  py-metrics:
+    build:
+      context: ./core
+      dockerfile: Dockerfile
+    container_name: ems4dc-metrics
+    restart: unless-stopped
+    command: ["python", "metrics.py", "--schedule"]
+    env_file: ./conf/.env
+    volumes:
+      - ./core:/app
+      - ./conf:/app/conf              # Live source mount for configuration files
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - ems-net
+
+  # ── Python: Forecast ─────────────────────────────────────
+  py-forecast:
+    build:
+      context: ./core
+      dockerfile: Dockerfile
+    container_name: ems4dc-forecast
+    restart: unless-stopped
+    command:
+      - python
+      - forecast.py
+      - --mode
+      - daemon
+      - --forecast-interval
+      - "2"
+      - --retrain-interval
+      - "1"
+      - --validation-interval
+      - "6"
+    env_file: ./conf/.env
+    volumes:
+      - ./core:/app
+      - ./conf:/app/conf              # Live source mount for configuration files
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - ems-net
+
+  # ── Python: Modbus API ───────────────────────────────────
+  py-modbus-api:
+    build:
+      context: ./core
+      dockerfile: Dockerfile
+    container_name: ems4dc-modbus-api
+    restart: unless-stopped
+    command: ["python", "modbus_api.py"]
+    env_file: ./conf/.env
+    ports:
+      - "5051:5051"          # Expose for debugging;
+    volumes:
+      - ./core:/app
+      - ./conf:/app/conf
+    networks:
+      - ems-net
+
+# ── Shared network ───────────────────────────────────────
+networks:
+  ems-net:
+    driver: bridge
+
+# ── Persistent volumes ───────────────────────────────────
+volumes:
+  ems-pgdata:

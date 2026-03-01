@@ -19,7 +19,7 @@ limitations under the License.
 @Description: Main orchestrator for EMS metrics calculation. Coordinates all metric calculators and runs on schedule.
 
 @Created: 11 February 2026
-@Last Modified: 17 February 2026
+@Last Modified: 27 February 2026
 @Author: Leon Gritsyuk
 
 @Version: v2.0.0
@@ -53,7 +53,7 @@ class MetricsOrchestrator:
     
     def __init__(
         self,
-        config_dir: str = "./../../web-app/backend/",
+        config_dir: str = "./conf/",
         db_config: Optional[DatabaseConfig] = None
     ):
         """

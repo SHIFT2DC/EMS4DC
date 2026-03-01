@@ -18,6 +18,8 @@ core/optimization/test_multi_device.py
 core/optimization/example_usage.py
 core/metrics_utils/metrics_schema.sql
 core/forecast_utils/schema_forecasts.sql
+core/optimization/example_usage.py 
+core/optimization/test_multi_device.py
 .env
 
 # Editor directories and files
@@ -32,3 +34,5 @@ core/forecast_utils/schema_forecasts.sql
 *.sw?
 
 web-app/frontend/src/components/ui
+npmjs.org.pem
+/db/init_dev.sql

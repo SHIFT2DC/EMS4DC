@@ -19,7 +19,7 @@ limitations under the License.
 @Description: Database configuration and connection management for EMS forecasting system.
 
 @Created: 08 February 2026
-@Last Modified: 10 February 2026
+@Last Modified: 01 March 2026
 @Author: LeonGritsyuk-eaton
 
 @Version: v2.0.0
@@ -37,7 +37,7 @@ from contextlib import contextmanager
 from dotenv import load_dotenv
 import os
 
-load_dotenv('./../web-app/backend/.env')
+load_dotenv('./../conf/.env')
 
 DB_USER = os.getenv('DB_USER')
 DB_PASSWORD = os.getenv('DB_PASSWORD')

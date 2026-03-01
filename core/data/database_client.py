@@ -19,7 +19,7 @@ limitations under the License.
 @Description: This script connects to PostgreSQL and queries average values for the most recent 15-minute interval, and also provides methods to get the most recent individual values.
 
 @Created: 1st July 2025
-@Last Modified: 17 February 2026
+@Last Modified: 27 February 2026
 @Author: LeonGritsyuk-eaton
 
 @Version: v2.0.0
@@ -38,7 +38,7 @@ setup_logging
 # Dotenv variables
 from dotenv import load_dotenv
 import os
-load_dotenv('./../web-app/backend/.env')
+load_dotenv('./conf/.env')
 
 DB_USER = os.getenv('DB_USER')
 DB_PASSWORD = os.getenv('DB_PASSWORD')

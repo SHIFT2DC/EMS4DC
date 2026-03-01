@@ -19,14 +19,13 @@ limitations under the License.
 @Description: # TODO: Add desc
 
 @Created: 1st January 2025
-@Last Modified: 18 February 2026
+@Last Modified: 01 March 2026
 @Author: LeonGritsyuk-eaton
 
 @Version: v2.0.0
 */
 
 
-/*@File: page-home.jsx*/
 import React, { useEffect, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Battery, Car, Plug, Sun, Zap, Wind, Grid3x3, RefreshCw } from "lucide-react"

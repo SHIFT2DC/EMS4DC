@@ -19,7 +19,7 @@ limitations under the License.
 @Description: # TODO: Add desc
 
 @Created: 31st July 2025
-@Last Modified: 16 February 2026
+@Last Modified: 01 March 2026
 @Author: LeonGritsyuk-eaton
 
 @Version: v2.0.0
@@ -390,7 +390,7 @@ class ModbusDataReader:
 if __name__ == "__main__":
     try:
         parser = argparse.ArgumentParser(description='Modbus Data Reader')
-        parser.add_argument('config_file', nargs='?', default='../../web-app/backend/modbus.json',
+        parser.add_argument('config_file', nargs='?', default='./conf/modbus.json',
                           help='Path to modbus configuration file')
         parser.add_argument('--asset-key', type=str, default=None,
                           help='Read only the device with this assetKey')
