@@ -19,7 +19,7 @@ limitations under the License.
 @Description: TODO
 
 @Created: 11 February 2026
-@Last Modified: 27 February 2026
+@Last Modified: 05 March 2026
 @Author: Leon Gritsyuk
 
 @Version: v2.0.0
@@ -27,7 +27,7 @@ limitations under the License.
 
 
 from utils.logging_utils import setup_logging
-from utils.time_utils import calculate_time_for_execution
+from utils.time_utils import calculate_time_for_execution, current_time
 import json
 import time
 import logging
@@ -124,7 +124,8 @@ class MeasurementsManager:
             if isinstance(data, str):
                 data = json.loads(data)
 
-            current_time = datetime.now()
+            now = current_time()
+            self.logger.info(f"DEBUG:MEASURE.PY: now: {now}")
             data_to_insert_to_db = []
 
             param_id = 1
@@ -139,7 +140,7 @@ class MeasurementsManager:
                     value = data.get(prefixed_name, 0)
 
                     data_to_insert_to_db.append(
-                        (param_id, current_time, prefixed_name, value, unit, 'ok', asset_key)
+                        (param_id, now, prefixed_name, value, unit, 'ok', asset_key)
                     )
                     param_id += 1
 

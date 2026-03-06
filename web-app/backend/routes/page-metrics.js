@@ -19,7 +19,7 @@ limitations under the License.
 @Description: Provides RESTful endpoints to access calculated metrics from PostgreSQL
 
 @Created: 11 February 2026
-@Last Modified: 01 March 2026
+@Last Modified: 05 March 2026
 @Author: Leon Gritsyuk
 
 @Version: v2.0.0
@@ -28,6 +28,10 @@ limitations under the License.
 
 import express from 'express';
 import { pool } from '../db/pool.js';
+import dotenv from "dotenv";
+
+dotenv.config();
+const TIMEZONE = process.env.TIMEZONE;
 
 const router = express.Router();
 
@@ -101,8 +105,8 @@ router.get('/summary', async (req, res) => {
 
     let query = `
       SELECT
-        period_start,
-        period_end,
+        period_start AT TIME ZONE $3 AS period_start,
+        period_end AT TIME ZONE $3 AS period_end,
         metric_category,
         metrics_json,
         calculation_time
@@ -110,7 +114,7 @@ router.get('/summary', async (req, res) => {
       WHERE period_end >= $1
         AND period_end   <= $2
     `;
-    const params = [start, end];
+    const params = [start, end, TIMEZONE];
 
     if (category) {
       query += ' AND metric_category = $3';
@@ -184,8 +188,8 @@ router.get('/assets/:assetKey', async (req, res) => {
 
     const query = `
       SELECT
-        period_start,
-        period_end,
+        period_start AT TIME ZONE $4 AS period_start,
+        period_end AT TIME ZONE $4 AS period_end,
         asset_key,
         asset_type,
         metric_name,
@@ -199,7 +203,7 @@ router.get('/assets/:assetKey', async (req, res) => {
       ORDER BY period_start DESC, metric_name
     `;
 
-    const result = await pool.query(query, [assetKey, start, end]);
+    const result = await pool.query(query, [assetKey, start, end, TIMEZONE]);
     res.json(result.rows);
   } catch (error) {
     console.error('Error fetching asset metrics:', error);
@@ -256,8 +260,8 @@ router.get('/hourly', async (req, res) => {
     const { start, end } = parseDateRange(req);
     const query = `
       SELECT
-        period_start,
-        period_end,
+        period_start AT TIME ZONE $3 AS period_start,
+        period_end AT TIME ZONE $3 AS period_end,
         metric_category,
         metrics_json
       FROM metrics_summary
@@ -267,7 +271,7 @@ router.get('/hourly', async (req, res) => {
       ORDER BY period_end ASC
     `;
 
-    const result = await pool.query(query, [start, end]);
+    const result = await pool.query(query, [start, end, TIMEZONE]);
     res.json(result.rows);
   } catch (error) {
     console.error('Error fetching hourly data:', error);
@@ -286,8 +290,8 @@ router.get('/monthly', async (req, res) => {
 
     const query = `
       SELECT
-        period_start,
-        period_end,
+        period_start AT TIME ZONE $3 AS period_start,
+        period_end AT TIME ZONE $3 AS period_end,
         metric_category,
         metrics_json
       FROM metrics_summary
@@ -298,7 +302,7 @@ router.get('/monthly', async (req, res) => {
       ORDER BY period_end ASC
     `;
 
-    const result = await pool.query(query, [start, end]);
+    const result = await pool.query(query, [start, end, TIMEZONE]);
     res.json(result.rows);
   } catch (error) {
     console.error('Error fetching monthly data:', error);
@@ -316,8 +320,8 @@ router.get('/energy-balance', async (req, res) => {
     const { start, end } = parseDateRange(req);
     const query = `
       SELECT
-        period_start,
-        period_end,
+        period_start AT TIME ZONE $3 AS period_start,
+        period_end AT TIME ZONE $3 AS period_end,
         metrics_json
       FROM metrics_summary
       WHERE metric_category = 'energy_flow'
@@ -326,7 +330,7 @@ router.get('/energy-balance', async (req, res) => {
       ORDER BY period_start ASC
     `;
 
-    const result = await pool.query(query, [start, end]);
+    const result = await pool.query(query, [start, end, TIMEZONE]);
 
     const aggregated = result.rows.reduce((acc, row) => {
       const d = row.metrics_json;

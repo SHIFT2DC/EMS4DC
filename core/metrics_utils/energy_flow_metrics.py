@@ -19,7 +19,7 @@ limitations under the License.
 @Description: Energy flow and totals metrics calculator. Handles grid, renewable generation, loads, EVs, and BESS energy flows.
 
 @Created: 11 February 2026
-@Last Modified: 10 February 2026
+@Last Modified: 05 March 2026
 @Author: Leon Gritsyuk
 
 @Version: v2.0.0
@@ -32,6 +32,7 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 from metrics_utils.data_loader import MeasurementLoader
 from metrics_utils.config_loader import ConfigLoader
+from utils.time_utils import current_time
 
 
 class EnergyFlowMetrics:
@@ -70,7 +71,7 @@ class EnergyFlowMetrics:
         
         metrics['period_start'] = start_time
         metrics['period_end'] = end_time
-        metrics['calculation_time'] = datetime.now()
+        metrics['calculation_time'] = current_time()
         
         return metrics
     

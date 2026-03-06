@@ -19,7 +19,7 @@ limitations under the License.
 @Description: # TODO: Add desc
 
 @Created: 3rd February 2026
-@Last Modified: 27 February 2026
+@Last Modified: 05 March 2026
 @Author: LeonGritsyuk-eaton
 
 @Version: v2.0.0
@@ -31,8 +31,8 @@ import os
 from .base_driver import BaseDeviceDriver, RegisterMapping
 from typing import Dict, Any, Optional
 
-MODBUS_CONFIG_PATH = './conf/modbus.json'
-DEVICE_CONFIG_PATH = './conf/config.json'
+MODBUS_CONFIG_PATH = './../conf/modbus.json'
+DEVICE_CONFIG_PATH = './../conf/config.json'
 
 class TemplateDriver(BaseDeviceDriver):
     """Driver for Device X"""

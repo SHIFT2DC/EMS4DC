@@ -19,7 +19,7 @@ limitations under the License.
 @Description: # TODO: Add desc
 
 @Created: 1st January 2025
-@Last Modified: 01 March 2026
+@Last Modified: 06 March 2026
 @Author: LeonGritsyuk-eaton
 
 @Version: v2.0.0
@@ -47,6 +47,12 @@ const DEVICE_TYPE_ICONS = {
   GRID: Grid3x3,
   AFE: Grid3x3
 }
+
+const getFlowLabels = (type) => {
+  if (type === "AFE")                        return { supply: "Importing", consume: "Exporting" };
+  if (type === "BI_EV" || type === "BESS")   return { supply: "Discharging", consume: "Charging" };
+  return                                            { supply: "Supplying", consume: "Consuming" };
+};
 
 const DEVICE_TYPE_COLORS = {
   PV: "bg-yellow-50 border-yellow-300 text-yellow-700 hover:bg-yellow-100",
@@ -249,7 +255,7 @@ function Home() {
   }
 
   return (
-    <div className="relative min-h-screen p-8">
+    <div className="relative p-8">
       {/* Header Controls */}
       <div className="max-w-7xl mx-auto mb-8 flex justify-between items-center">
         <div>
@@ -385,7 +391,10 @@ function DeviceCard({ device, onClick }) {
               : "text-gray-400"
           }`}
         >
-          {device.power > 10 ? "↓ Supplying" : device.power < -10 ? "↑ Consuming" : "Idle"}
+          {(() => {
+            const { supply, consume } = getFlowLabels(device.type);
+            return device.power > 10 ? `↓ ${supply}` : device.power < -10 ? `↑ ${consume}` : "Idle";
+          })()}
         </div>
       </div>
 

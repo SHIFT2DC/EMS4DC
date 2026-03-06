@@ -19,7 +19,7 @@ limitations under the License.
 @Description: This script connects to PostgreSQL and queries average values for the most recent 15-minute interval, and also provides methods to get the most recent individual values.
 
 @Created: 1st July 2025
-@Last Modified: 27 February 2026
+@Last Modified: 05 March 2026
 @Author: LeonGritsyuk-eaton
 
 @Version: v2.0.0
@@ -31,6 +31,7 @@ import pandas as pd
 from datetime import datetime
 import sys
 import logging
+from utils.time_utils import current_time, TIMEZONE
 from utils.logging_utils import setup_logging
 setup_logging
 
@@ -135,18 +136,15 @@ class LastIntervalQuerier:
             interval_start = df.iloc[0]['interval_start']
             
             # Perform freshness check
-            current_time = datetime.now()
-            if timezone:
-                # Handle timezone-aware comparison
-                import pytz
-                tz = pytz.timezone(timezone)
-                current_time = current_time.replace(tzinfo=tz)
-                # Ensure interval_end is timezone-aware for comparison
-                if interval_end.tzinfo is None:
-                    interval_end = tz.localize(interval_end)
+            now = current_time()
+
+            if interval_end.tzinfo is None:
+                interval_end = interval_end.replace(tzinfo=TIMEZONE)
+            if interval_start.tzinfo is None:
+                interval_start = interval_start.replace(tzinfo=TIMEZONE)
             
             # Calculate age of the data
-            data_age = current_time - interval_end
+            data_age = now - interval_end
             age_minutes = data_age.total_seconds() / 60
             
             self.logger.debug(f"Last 15-minute interval: {interval_start} to {interval_end}")
@@ -227,18 +225,14 @@ class LastIntervalQuerier:
             most_recent_time = df['measurement_time'].max()
             
             # Perform freshness check
-            current_time = datetime.now()
-            if timezone:
-                # Handle timezone-aware comparison
-                import pytz
-                tz = pytz.timezone(timezone)
-                current_time = current_time.replace(tzinfo=tz)
-                # Ensure measurement time is timezone-aware for comparison
-                if most_recent_time.tzinfo is None:
-                    most_recent_time = tz.localize(most_recent_time)
+            now = current_time()
+
+            # Always ensure most_recent_time is tz-aware before comparing
+            if most_recent_time.tzinfo is None:
+                most_recent_time = most_recent_time.replace(tzinfo=TIMEZONE)
             
             # Calculate age of the oldest recent data
-            data_age = current_time - most_recent_time
+            data_age = now - most_recent_time
             age_minutes = data_age.total_seconds() / 60
             
             self.logger.debug(f"Most recent measurements time range: {df['measurement_time'].min()} to {df['measurement_time'].max()}")

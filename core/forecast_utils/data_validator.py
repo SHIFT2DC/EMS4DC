@@ -19,7 +19,7 @@ limitations under the License.
 @Description: Data validation module to assess forecast readiness for each asset. Checks if sufficient historical data exists before allowing forecast generation.
 
 @Created: 08 February 2026
-@Last Modified: 17 February 2026
+@Last Modified: 05 March 2026
 @Author: LeonGritsyuk-eaton
 
 @Version: v2.0.0
@@ -33,6 +33,7 @@ import logging
 from forecast_utils.db_config import get_db
 
 from utils.logging_utils import setup_logging
+from utils.time_utils import current_time
 setup_logging()
 logger = logging.getLogger(__name__)
 
@@ -217,7 +218,7 @@ class DataValidator:
             """, (
                 asset_key, total_samples, first_measurement,
                 last_measurement, coverage_pct, min_samples,
-                is_ready, datetime.now()
+                is_ready, current_time()
             ))
     
     def get_ready_assets(self) -> List[Tuple[str, str]]:
@@ -251,7 +252,7 @@ class DataValidator:
             Dictionary with gap analysis
         """
         power_param = f"{asset_key}_POWER"
-        end_time = datetime.now()
+        end_time = current_time()
         start_time = end_time - timedelta(days=days)
         
         with self.db.get_cursor() as cursor:

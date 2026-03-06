@@ -19,7 +19,7 @@ limitations under the License.
 @Description: Metrics storage module for persisting calculated metrics to database.
 
 @Created: 11 February 2026
-@Last Modified: 10 February 2026
+@Last Modified: 05 March 2026
 @Author: Leon Gritsyuk
 
 @Version: v2.0.0
@@ -32,6 +32,7 @@ import pandas as pd
 from datetime import datetime
 from typing import Dict, List, Optional
 from metrics_utils.database import DatabaseConnection
+from utils.time_utils import current_time
 
 
 class MetricsStorage:
@@ -303,7 +304,7 @@ class MetricsStorage:
         params = (
             period_start,
             period_end,
-            datetime.now(),
+            current_time(),
             category,
             json.dumps(clean_metrics)
         )
@@ -344,7 +345,7 @@ class MetricsStorage:
                 metric_name,
                 float(value),
                 unit,
-                datetime.now()
+                current_time()
             ))
         
         if not records:

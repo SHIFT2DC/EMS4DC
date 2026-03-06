@@ -19,7 +19,7 @@ limitations under the License.
 @Description: # TODO: Add desc
 
 @Created: 31st July 2025
-@Last Modified: 01 March 2026
+@Last Modified: 05 March 2026
 @Author: LeonGritsyuk-eaton
 
 @Version: v2.0.0
@@ -39,6 +39,7 @@ from collections import defaultdict
 import argparse
 
 from utils.logging_utils import setup_logging
+from utils.time_utils import current_time
 setup_logging
 logger = logging.getLogger(__name__)
 
@@ -213,7 +214,7 @@ class ModbusDataReader:
         if not device:
             logger.error(f"Device with assetKey {asset_key} not found in config")
             return {
-                "timestamp": datetime.now().strftime('%H-%M-%S'),
+                "timestamp": current_time().strftime('%H-%M-%S'),
                 "assetKey": asset_key,
                 "error": "Device not found in configuration",
                 "success": False
@@ -222,7 +223,7 @@ class ModbusDataReader:
         device_data = self.read_device_data(device, use_asset_key=True)
 
         result = {
-            "timestamp": datetime.now().strftime('%H-%M-%S'),
+            "timestamp": current_time().strftime('%H-%M-%S'),
             "assetKey": asset_key,
             "success": len(device_data) > 0
         }
@@ -247,7 +248,7 @@ class ModbusDataReader:
         """
         Read all devices in parallel using the persistent client pool.
         """
-        data = {"timestamp": datetime.now().strftime('%H-%M-%S')}
+        data = {"timestamp": current_time().strftime('%H-%M-%S')}
         with ThreadPoolExecutor(max_workers=min(len(self.config['devices']), 10)) as executor:
             futures = {executor.submit(self.read_device_data, d): d.get('assetKey', d['name']) for d in self.config['devices']}
             for future in as_completed(futures):

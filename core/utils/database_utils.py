@@ -19,7 +19,7 @@ limitations under the License.
 @Description: # TODO: Add desc
 
 @Created: 3rd February 2026
-@Last Modified: 23 February 2026
+@Last Modified: 05 March 2026
 @Author: LeonGritsyuk-eaton
 
 @Version: v2.0.0
@@ -31,6 +31,7 @@ import psycopg2
 from datetime import datetime
 from typing import Dict, Any
 import data.database_client as db_client
+from utils.time_utils import current_time
 
 
 class DatabaseOperations:
@@ -96,7 +97,7 @@ class DatabaseOperations:
         def add(param, value, unit):
             nonlocal output_id
             rows.append((
-                output_id, datetime.now(), param, value,
+                output_id, current_time(), param, value,
                 unit, quality, self.objective_function
             ))
             output_id += 1
@@ -222,7 +223,7 @@ class DatabaseOperations:
         def add(param, value, unit):
             nonlocal input_id
             rows.append((
-                input_id, datetime.now(), param, value,
+                input_id, current_time(), param, value,
                 unit, 'ok', self.objective_function
             ))
             input_id += 1

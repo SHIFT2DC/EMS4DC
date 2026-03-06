@@ -19,7 +19,7 @@ limitations under the License.
 @Description: Base forecasting models for different asset types. Supports multiple forecasting approaches: Prophet, SARIMA, and simple baseline models.
 
 @Created: 08 February 2026
-@Last Modified: 17 February 2026
+@Last Modified: 05 March 2026
 @Author: LeonGritsyuk-eaton
 
 @Version: v2.0.0
@@ -35,6 +35,7 @@ import logging
 from dataclasses import dataclass
 
 from utils.logging_utils import setup_logging
+from utils.time_utils import current_time
 setup_logging()
 logger = logging.getLogger(__name__)
 
@@ -174,7 +175,7 @@ class ProphetForecaster(BaseForecaster):
             raise ValueError("Model must be trained before prediction")
         
         # Start forecast from the next rounded hour
-        now = datetime.now()
+        now = current_time()
         if now.minute == 0 and now.second == 0:
             start_time = now
         else:
@@ -261,7 +262,7 @@ class SimpleMovingAverageForecaster(BaseForecaster):
             raise ValueError("Model must be trained before prediction")
         
         # Start forecast from the next rounded hour
-        now = datetime.now()
+        now = current_time()
         if now.minute == 0 and now.second == 0:
             start_time = now
         else:
@@ -334,7 +335,7 @@ class PersistenceForecaster(BaseForecaster):
             raise ValueError("Model must be trained before prediction")
         
         # Start forecast from the next rounded hour
-        now = datetime.now()
+        now = current_time()
         if now.minute == 0 and now.second == 0:
             start_time = now
         else:

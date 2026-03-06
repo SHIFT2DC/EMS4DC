@@ -19,7 +19,7 @@ limitations under the License.
 @Description: # TODO: Add desc
 
 @Created: 1st January 2025
-@Last Modified: 16 February 2026
+@Last Modified: 06 March 2026
 @Author: LeonGritsyuk-eaton
 
 @Version: v2.0.0
@@ -27,6 +27,9 @@ limitations under the License.
 
 import { Outlet, useLocation } from "react-router-dom"
 import Header from "./Header"
+import EULogo from "@/assets/eu_logo.png"
+import SHIFT2DCLogo from "@/assets/Horizontal_LogoSHIFT2DC_Color.png"
+import SwissLogo from "@/assets/WBF_SBFI_EU_Frameworkprogramme_E_RGB_pos_quer.jpg"
 
 function Layout() {
   const location = useLocation()
@@ -35,16 +38,41 @@ function Layout() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col" style={{ "--header-height": "4rem" }}>
       <Header />
-        <div className="flex flex-1 w-full">
-          {
-            <main className="container mx-auto px-4 py-8 flex-1">
-              <Outlet />
-            </main>
-          }
-        </div>
+      <div className="flex flex-1 w-full">
+        <main className="container mx-auto px-4 py-8 flex-1">
+          <Outlet />
+        </main>
+      </div>
       {!isDevicesRoute && (
-        <footer className="bg-gray-100 text-center py-4 text-sm text-gray-600">
-          © {new Date().getFullYear()} EMS4DC for SHIFT2DC. Horizon Europe. Grant Agreement №101136131.
+        <footer className="bg-white border-t border-gray-200 py-6 px-8">
+          <div className="grid grid-cols-3 items-center gap-8 max-w-4xl mx-auto">
+            {/* Project Logo */}
+            <div className="flex justify-center items-center">
+              <img
+                src={SHIFT2DCLogo}
+                alt="SHIFT2DC Logo"
+                className="h-12 object-contain"
+              />
+            </div>
+
+            {/* EU Logo */}
+            <div className="flex justify-center items-center">
+              <img
+                src={EULogo}
+                alt="EU Logo"
+                className="h-50 object-contain"
+              />
+            </div>
+
+            {/* Confederation Logo */}
+            <div className="flex justify-center items-center">
+              <img
+                src={SwissLogo}
+                alt="Swiss Confederation Logo"
+                className="h-50 object-contain"
+              />
+            </div>
+          </div>
         </footer>
       )}
     </div>

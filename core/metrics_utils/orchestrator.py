@@ -19,7 +19,7 @@ limitations under the License.
 @Description: Main orchestrator for EMS metrics calculation. Coordinates all metric calculators and runs on schedule.
 
 @Created: 11 February 2026
-@Last Modified: 27 February 2026
+@Last Modified: 05 March 2026
 @Author: Leon Gritsyuk
 
 @Version: v2.0.0
@@ -41,7 +41,7 @@ from metrics_utils.efficiency_utilization_metrics import EfficiencyUtilizationMe
 from metrics_utils.statistical_metrics import StatisticalMetrics
 from metrics_utils.metrics_storage import MetricsStorage
 
-from utils.time_utils import floor_to_hour
+from utils.time_utils import floor_to_hour, current_time
 from utils.logging_utils import setup_logging
 import logging
 
@@ -91,7 +91,7 @@ class MetricsOrchestrator:
             period_hours: Hours to look back if start_time not provided
         """
         if end_time is None:
-            end_time = datetime.now()
+            end_time = current_time()
         
         if start_time is None:
             start_time = end_time - timedelta(hours=period_hours)
@@ -158,14 +158,14 @@ class MetricsOrchestrator:
     
     def calculate_hourly_metrics(self):
         """Calculate metrics for the last hour."""
-        end_time = floor_to_hour(datetime.now())
+        end_time = floor_to_hour(current_time())
         start_time = end_time - timedelta(hours=1)
         logger.debug(f"Running hourly metrics calculation for period: [{start_time}]-[{end_time}]")
         self.calculate_and_store_metrics(period_hours=1, start_time=start_time, end_time=end_time)
     
     def calculate_daily_metrics(self):
         """Calculate metrics for the last 24 hours."""
-        end_time = floor_to_hour(datetime.now())
+        end_time = floor_to_hour(current_time())
         start_time = end_time - timedelta(days=1)
         logger.debug(f"Running daily metrics calculation for period: [{start_time}]-[{end_time}]")
         self.calculate_and_store_metrics(period_hours=24)
@@ -200,7 +200,7 @@ class MetricsOrchestrator:
         # hour and start to one period before that.
         logger.debug("Running initial metrics calculation...")
         if hourly:
-            end_time = floor_to_hour(datetime.now())
+            end_time = floor_to_hour(current_time())
             start_time = end_time - timedelta(hours=1)
             self.calculate_and_store_metrics(start_time=start_time, end_time=end_time)
         

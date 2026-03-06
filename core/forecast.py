@@ -19,7 +19,7 @@ limitations under the License.
 @Description: Scheduler module for orchestrating periodic forecast generation and model retraining.
 
 @Created: 08 February 2026
-@Last Modified: 17 February 2026
+@Last Modified: 05 March 2026
 @Author: LeonGritsyuk-eaton
 
 @Version: v2.0.0
@@ -40,6 +40,7 @@ from forecast_utils.forecast_generator import ForecastGenerator
 from forecast_utils.model_trainer import ModelTrainer
 
 from utils.logging_utils import setup_logging
+from utils.time_utils import current_time
 setup_logging()
 logger = logging.getLogger('forecast')
 
@@ -93,14 +94,14 @@ class ForecastScheduler:
             logger.debug("Starting scheduled forecast generation")
             logger.debug("=" * 80)
             
-            start_time = datetime.now()
+            start_time = current_time()
             
             results = self.generator.generate_all_forecasts(
                 horizon_hours=12,
                 interval_minutes=60  # Hourly forecasts
             )
             
-            duration = (datetime.now() - start_time).total_seconds()
+            duration = (current_time() - start_time).total_seconds()
             success_count = sum(results.values())
             
             logger.debug(f"Forecast generation completed in {duration:.1f}s")
@@ -135,11 +136,11 @@ class ForecastScheduler:
             logger.debug("Starting scheduled model retraining check")
             logger.debug("=" * 80)
             
-            start_time = datetime.now()
+            start_time = current_time()
             
             results = self.trainer.retrain_all_models(force=False)
             
-            duration = (datetime.now() - start_time).total_seconds()
+            duration = (current_time() - start_time).total_seconds()
             trained = sum(1 for v in results.values() if v is True)
             failed = sum(1 for v in results.values() if v is False)
             skipped = sum(1 for v in results.values() if v is None)

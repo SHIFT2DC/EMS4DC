@@ -19,7 +19,7 @@ limitations under the License.
 @Description: Forecast generator module that orchestrates training and prediction for all assets. Handles data preparation, model training, prediction, and database storage.
 
 @Created: 08 February 2026
-@Last Modified: 17 February 2026
+@Last Modified: 05 March 2026
 @Author: LeonGritsyuk-eaton
 
 @Version: v2.0.0
@@ -38,6 +38,7 @@ from forecast_utils.data_validator import DataValidator, MIN_SAMPLES_REQUIREMENT
 from forecast_utils.forecast_models import create_forecaster, ForecastResult
 
 from utils.logging_utils import setup_logging
+from utils.time_utils import current_time
 setup_logging()
 logger = logging.getLogger(__name__)
 
@@ -208,7 +209,7 @@ class ForecastGenerator:
             DataFrame with 'timestamp' and 'power' columns (resampled)
         """
         power_param = f"{asset_key}_POWER"
-        end_time = datetime.now()
+        end_time = current_time()
         start_time = end_time - timedelta(days=days)
         
         with self.db.get_cursor() as cursor:
@@ -253,7 +254,7 @@ class ForecastGenerator:
             asset_key: Unique identifier for the asset
             forecast_result: Forecast results to save
         """
-        forecast_timestamp = datetime.now()
+        forecast_timestamp = current_time()
         
         # Prepare data for batch insert
         records = []

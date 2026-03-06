@@ -19,7 +19,7 @@ limitations under the License.
 @Description: # TODO: Add desc
 
 @Created: 24th November 2025
-@Last Modified: 19 February 2026
+@Last Modified: 05 March 2026
 @Author: LeonGritsyuk-eaton
 
 @Version: v2.0.0
@@ -28,7 +28,10 @@ limitations under the License.
 
 import { pool } from '../db/pool.js';
 import express from 'express';
+import dotenv from "dotenv";
 
+dotenv.config();
+const TIMEZONE = process.env.TIMEZONE;
 const router = express.Router();
 
 // Endpoint to get data for charts page
@@ -62,18 +65,18 @@ router.get("/", async (req, res) => {
     const measurementsResult = await client.query(
       `
       SELECT 
-        EXTRACT(HOUR FROM "time") AS hour,
+        EXTRACT(HOUR FROM "time" AT TIME ZONE $3) AS hour,
         "parameter",
         AVG("value") AS average_value
       FROM "measurements"
       WHERE "parameter" = ANY($2)
-        AND "time" >= $1::date
-        AND "time" < ($1::date + INTERVAL '1 day')
+        AND "time" >= $1::date AT TIME ZONE $3
+        AND "time" < ($1::date + INTERVAL '1 day') AT TIME ZONE $3
         AND "quality" = 'ok'
-      GROUP BY EXTRACT(HOUR FROM "time"), "parameter"
+      GROUP BY EXTRACT(HOUR FROM "time" AT TIME ZONE $3), "parameter"
       ORDER BY hour, "parameter";
       `,
-      [date, parameterNames]
+      [date, parameterNames, TIMEZONE]
     );
 
     // Query for forecasts for all active assets
@@ -81,15 +84,15 @@ router.get("/", async (req, res) => {
       `
       SELECT 
         asset_key,
-        EXTRACT(HOUR FROM horizon_timestamp) AS hour,
+        EXTRACT(HOUR FROM horizon_timestamp AT TIME ZONE $3) AS hour,
         predicted_power
       FROM forecasts
       WHERE asset_key = ANY($2)
-        AND horizon_timestamp >= $1::date
-        AND horizon_timestamp < ($1::date + INTERVAL '1 day')
+        AND horizon_timestamp >= $1::date AT TIME ZONE $3
+        AND horizon_timestamp < ($1::date + INTERVAL '1 day') AT TIME ZONE $3
       ORDER BY asset_key, hour;
       `,
-      [date, assetKeys]
+      [date, assetKeys, TIMEZONE]
     );
 
     client.release();

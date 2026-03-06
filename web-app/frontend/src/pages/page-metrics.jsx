@@ -19,7 +19,7 @@ limitations under the License.
 @Description: TODO
 
 @Created: 11 February 2026
-@Last Modified: 20 February 2026
+@Last Modified: 05 March 2026
 @Author: Leon Gritsyuk
 
 @Version: v2.0.0
@@ -45,6 +45,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Button } from '@/components/ui/button';
 import { format, subDays, subMonths, eachHourOfInterval, eachMonthOfInterval, startOfHour, startOfMonth } from 'date-fns';
 import api from '@/lib/axios';
+// import { time } from 'systeminformation';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -416,7 +417,7 @@ const MetricsDashboard = () => {
 
   const processHourlyData = (data) => data.map(item => {
     const e = item.metrics_json;
-    const periodEnd = new Date(item.period_end || item.period_start);
+    const periodEnd = new Date((item.period_end || item.period_start).replace('Z', ''));
     return {
       slotKey:        format(periodEnd, "yyyy-MM-dd'T'HH"),
       time:           format(periodEnd, 'HH:mm'),
@@ -435,7 +436,7 @@ const MetricsDashboard = () => {
 
   const processMonthlyData = (data) => data.map(item => {
     const e = item.metrics_json;
-    const periodEnd = new Date(item.period_end || item.period_start);
+    const periodEnd = new Date((item.period_end || item.period_start).replace('Z', ''));
     return {
       slotKey:        format(periodEnd, 'yyyy-MM'),
       month:          format(periodEnd, 'MMM yyyy'),

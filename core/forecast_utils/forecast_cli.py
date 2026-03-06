@@ -19,7 +19,7 @@ limitations under the License.
 @Description: Command-line interface for EMS Forecasting System
 
 @Created: 08 February 2026
-@Last Modified: 16 February 2026
+@Last Modified: 05 March 2026
 @Author: LeonGritsyuk-eaton
 
 @Version: v2.0.0
@@ -36,6 +36,7 @@ from forecast_utils.db_config import get_db, initialize_database
 from forecast_utils.data_validator import DataValidator
 from forecast_utils.forecast_generator import ForecastGenerator
 from forecast_utils.model_trainer import ModelTrainer
+from utils.time_utils import current_time
 
 
 def cmd_status(args):
@@ -96,13 +97,13 @@ def cmd_forecast(args):
     
     generator = ForecastGenerator(model_type=args.model_type)
     
-    start_time = datetime.now()
+    start_time = current_time()
     results = generator.generate_all_forecasts(
         horizon_hours=args.horizon,
         interval_minutes=args.interval,
         force=args.force
     )
-    duration = (datetime.now() - start_time).total_seconds()
+    duration = (current_time() - start_time).total_seconds()
     
     # Prepare results table
     table_data = []

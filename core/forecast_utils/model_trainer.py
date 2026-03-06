@@ -19,7 +19,7 @@ limitations under the License.
 @Description: Model training and retraining scheduler. Manages periodic retraining to improve forecast accuracy as more data accumulates.
 
 @Created: 08 February 2026
-@Last Modified: 17 February 2026
+@Last Modified: 05 March 2026
 @Author: LeonGritsyuk-eaton
 
 @Version: v2.0.0
@@ -36,6 +36,7 @@ from forecast_utils.data_validator import DataValidator
 from forecast_utils.forecast_generator import ForecastGenerator
 
 from utils.logging_utils import setup_logging
+from utils.time_utils import current_time
 setup_logging()
 logger = logging.getLogger(__name__)
 
@@ -74,7 +75,7 @@ class ModelTrainer:
             }
         
         # Check if minimum interval has passed
-        time_since_training = datetime.now() - last_training['trained_at']
+        time_since_training = current_time() - last_training['trained_at']
         hours_since_training = time_since_training.total_seconds() / 3600
         
         if hours_since_training < self.MIN_RETRAINING_INTERVAL_HOURS:

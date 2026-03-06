@@ -7,8 +7,8 @@ CREATE TABLE IF NOT EXISTS assets (
     name VARCHAR(100) NOT NULL,
     type VARCHAR(50) NOT NULL,
     is_active BOOLEAN DEFAULT true,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 COMMENT ON TABLE assets IS 'Stores basic information for all site assets';
 
@@ -16,14 +16,14 @@ CREATE TABLE IF NOT EXISTS asset_events (
     id SERIAL PRIMARY KEY,
     asset_id INTEGER REFERENCES assets(id) ON DELETE CASCADE,
     event_type VARCHAR(50) NOT NULL,
-    event_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    event_timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 COMMENT ON TABLE asset_events IS 'Audit trail for all asset-related events';
 
 CREATE TABLE IF NOT EXISTS measurements (
     id BIGSERIAL PRIMARY KEY,
     measurement_id INT NOT NULL,
-    time TIMESTAMP NOT NULL DEFAULT now(),
+    time TIMESTAMPTZ NOT NULL DEFAULT now(),
     parameter TEXT NOT NULL,
     value DOUBLE PRECISION NOT NULL,
     unit TEXT NOT NULL,
@@ -35,7 +35,7 @@ COMMENT ON TABLE measurements IS 'Stores measurements for all devices';
 CREATE TABLE IF NOT EXISTS "ems-inputs" (
     id BIGSERIAL PRIMARY KEY,
     input_id INT NOT NULL,
-    time TIMESTAMP NOT NULL DEFAULT now(),
+    time TIMESTAMPTZ NOT NULL DEFAULT now(),
     parameter TEXT NOT NULL,
     value DOUBLE PRECISION NOT NULL,
     unit TEXT NOT NULL,
@@ -47,7 +47,7 @@ COMMENT ON TABLE "ems-inputs" IS 'Stores inputs which were used for optimization
 CREATE TABLE IF NOT EXISTS "ems-outputs" (
     id BIGSERIAL PRIMARY KEY,
     output_id INT NOT NULL,
-    time TIMESTAMP NOT NULL DEFAULT now(),
+    time TIMESTAMPTZ NOT NULL DEFAULT now(),
     parameter TEXT NOT NULL,
     value DOUBLE PRECISION NOT NULL,
     unit TEXT NOT NULL,
@@ -59,13 +59,13 @@ COMMENT ON TABLE "ems-outputs" IS 'Stores outputs which were used for optimizati
 CREATE TABLE IF NOT EXISTS forecasts (
     id SERIAL PRIMARY KEY,
     asset_key VARCHAR(50) NOT NULL,
-    forecast_timestamp TIMESTAMP NOT NULL,
-    horizon_timestamp TIMESTAMP NOT NULL,
+    forecast_timestamp TIMESTAMPTZ NOT NULL,
+    horizon_timestamp TIMESTAMPTZ NOT NULL,
     predicted_power FLOAT NOT NULL,
     confidence_lower FLOAT,
     confidence_upper FLOAT,
     model_version VARCHAR(50),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_asset FOREIGN KEY (asset_key)
         REFERENCES assets(asset_key) ON DELETE CASCADE,
     CONSTRAINT unique_forecast UNIQUE (asset_key, forecast_timestamp, horizon_timestamp)
@@ -76,14 +76,14 @@ CREATE TABLE IF NOT EXISTS model_metadata (
     id SERIAL PRIMARY KEY,
     asset_key VARCHAR(50) NOT NULL,
     model_version VARCHAR(50) NOT NULL,
-    training_start_date TIMESTAMP NOT NULL,
-    training_end_date TIMESTAMP NOT NULL,
+    training_start_date TIMESTAMPTZ NOT NULL,
+    training_end_date TIMETIMESTAMPTZSTAMP NOT NULL,
     samples_count INTEGER NOT NULL,
     model_type VARCHAR(50) NOT NULL,
     model_params JSONB,
     performance_metrics JSONB,
     is_active BOOLEAN DEFAULT TRUE,
-    trained_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    trained_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_model_asset FOREIGN KEY (asset_key)
         REFERENCES assets(asset_key) ON DELETE CASCADE
 );
@@ -93,12 +93,12 @@ CREATE TABLE IF NOT EXISTS forecast_readiness (
     id SERIAL PRIMARY KEY,
     asset_key VARCHAR(50) UNIQUE NOT NULL,
     total_samples INTEGER DEFAULT 0,
-    first_measurement TIMESTAMP,
-    last_measurement TIMESTAMP,
+    first_measurement TIMESTAMPTZ,
+    last_measurement TIMESTAMPTZ,
     data_coverage_pct FLOAT,
     min_samples_required INTEGER DEFAULT 672,
     is_ready_for_forecast BOOLEAN DEFAULT FALSE,
-    last_checked TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_checked TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_readiness_asset FOREIGN KEY (asset_key)
         REFERENCES assets(asset_key) ON DELETE CASCADE
 );
@@ -106,40 +106,40 @@ COMMENT ON TABLE forecast_readiness IS 'Stores information about minimum require
 
 CREATE TABLE IF NOT EXISTS metrics_summary (
     id SERIAL PRIMARY KEY,
-    period_start TIMESTAMP NOT NULL,
-    period_end TIMESTAMP NOT NULL,
-    calculation_time TIMESTAMP NOT NULL,
+    period_start TIMESTAMPTZ NOT NULL,
+    period_end TIMESTAMPTZ NOT NULL,
+    calculation_time TIMESTAMPTZ NOT NULL,
     metric_category VARCHAR(50) NOT NULL,
     metrics_json JSONB NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(period_start, period_end, metric_category)
 );
 COMMENT ON TABLE metrics_summary IS 'Stores general calculated metrics';
 
 CREATE TABLE IF NOT EXISTS asset_metrics (
     id SERIAL PRIMARY KEY,
-    period_start TIMESTAMP NOT NULL,
-    period_end TIMESTAMP NOT NULL,
+    period_start TIMESTAMPTZ NOT NULL,
+    period_end TIMESTAMPTZ NOT NULL,
     asset_key VARCHAR(50) NOT NULL,
     asset_type VARCHAR(50) NOT NULL,
     metric_name VARCHAR(100) NOT NULL,
     metric_value DOUBLE PRECISION,
     metric_unit VARCHAR(20),
-    calculation_time TIMESTAMP NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    calculation_time TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(period_start, period_end, asset_key, metric_name)
 );
 COMMENT ON TABLE asset_metrics IS 'Stores asset related metrics';
 
 CREATE TABLE IF NOT EXISTS metrics_timeseries (
     id SERIAL PRIMARY KEY,
-    timestamp TIMESTAMP NOT NULL,
+    timestamp TIMESTAMPTZ NOT NULL,
     asset_key VARCHAR(50),
     parameter VARCHAR(100) NOT NULL,
     aggregated_value DOUBLE PRECISION,
     aggregation_type VARCHAR(20) NOT NULL,
     aggregation_interval VARCHAR(10) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(timestamp, asset_key, parameter, aggregation_type, aggregation_interval)
 );
 

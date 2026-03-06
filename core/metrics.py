@@ -30,7 +30,7 @@ limitations under the License.
     python metrics.py --backfill --start "2026-02-01 00:00:00" --end "2026-02-10 00:00:00" --period-hours 1
 
 @Created: 11 February 2026
-@Last Modified: 27 February 2026
+@Last Modified: 05 March 2026
 @Author: Leon Gritsyuk
 
 @Version: v2.0.0
@@ -44,7 +44,7 @@ from pathlib import Path
 
 import logging
 from metrics_utils.orchestrator import MetricsOrchestrator
-from utils.time_utils import floor_to_hour
+from utils.time_utils import floor_to_hour, current_time
 from utils.logging_utils import setup_logging
 setup_logging()
 logger = logging.getLogger('metrics')
@@ -154,7 +154,7 @@ def main():
     # hour and start to one period before that, so database timestamps are always
     # aligned to clean hour boundaries regardless of when the command is run.
     if (args.once or args.schedule) and end_time is None:
-        end_time = floor_to_hour(datetime.now())
+        end_time = floor_to_hour(current_time())
         if start_time is None:
             start_time = end_time - timedelta(hours=args.period_hours)
     
