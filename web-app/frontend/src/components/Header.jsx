@@ -19,7 +19,7 @@ limitations under the License.
 @Description: # TODO: Add desc
 
 @Created: 1st January 2025
-@Last Modified: 18 February 2026
+@Last Modified: 20 March 2026
 @Author: LeonGritsyuk-eaton
 
 @Version: v2.0.0
@@ -53,7 +53,6 @@ function Header() {
     { to: "/metrics",      icon: ChartArea,             label: "Metrics" },
     { to: "/emsdashboard", icon: ChartColumnIncreasing, label: "Optimization" },
     { to: "/droopcurves",  icon: ChartNetwork,          label: "Droop" },
-    { to: "/systeminfo",   icon: Cpu,                   label: "Server Info", maintainerOnly: true },
     { to: "/settings",     icon: Cog,                   label: "Settings",    maintainerOnly: true },
     { to: "https://shift2dc.github.io/docs.ems/", icon: BookA, label: "Docs" },
   ]

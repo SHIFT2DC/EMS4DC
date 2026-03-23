@@ -14,6 +14,21 @@ However, the EMS4DC can be adjusted to include different combination of energy a
 
 ## Project's Structure:
 ```
+├── 📁 .githooks <--------------------------- Scripts dealing with files' metadata and headers
+│   ├── 📁 scripts
+│   │   ├── 🐍 license_templates.py
+│   │   ├── 🐍 update_headers.py
+│   │   ├── 🐍 update_version.py
+│   │   └── 🐍 utils.py
+│   ├── 📄 commit-msg
+│   ├── 📄 post-commit
+│   └── 📄 pre-commit
+├── 📁 .github
+│   └── 📝 CODE_OF_CONDUCT.md
+├── 📁 conf <-------------------------------- Shared folder for containers
+│   ├── ⚙️ .env.example
+│   ├── ⚙️ config.json
+│   └── ⚙️ modbus.json
 ├── 📁 core <-------------------------------- Core Python functionality of the EMS4DC
 │   ├── 📁 data <---------------------------- Data related modules and utilities
 │   │   ├── 🐍 __init__.py
@@ -25,7 +40,9 @@ However, the EMS4DC can be adjusted to include different combination of energy a
 │   │   ├── 🐍 afe_driver.py
 │   │   ├── 🐍 base_driver.py
 │   │   ├── 🐍 bess_driver.py
-│   │   └── 🐍 template_driver.py
+│   │   ├── 🐍 pv_driver.py
+│   │   ├── 🐍 template_driver.py
+│   │   └── 🐍 uniev_driver.py
 │   ├── 📁 forecast_utils <------------------ Utilities which are used for forecast generation
 │   │   ├── 🐍 __init__.py
 │   │   ├── 🐍 data_validator.py
@@ -61,12 +78,17 @@ However, the EMS4DC can be adjusted to include different combination of energy a
 │   │   ├── 🐍 logging_utils.py
 │   │   ├── 🐍 optimizer_utils.py
 │   │   └── 🐍 time_utils.py
+│   ├── ⚙️ .dockerignore
+│   ├── 🐳 Dockerfile
 │   ├── 🐍 __init__.py
 │   ├── 🐍 forecast.py
 │   ├── 🐍 measure.py
 │   ├── 🐍 metrics.py
+│   ├── 🐍 modbus_api.py
 │   ├── 🐍 optimizer.py
 │   └── 📄 requirements.txt
+├── 📁 db <---------------------------------- Initialization script for database
+│   └── 📄 init.sql
 ├── 📁 docs
 │   └── 🖼️ high-level-architecture.jpg
 ├── 📁 web-app
@@ -86,12 +108,10 @@ However, the EMS4DC can be adjusted to include different combination of energy a
 │   │   │   ├── 📄 page-home.js
 │   │   │   ├── 📄 page-metrics.js
 │   │   │   ├── 📄 page-settings.js
-│   │   │   ├── 📄 page-sys-info.js
 │   │   │   ├── 📄 profile.js
 │   │   │   └── 📄 users.js
-│   │   ├── ⚙️ .env.example
-│   │   ├── ⚙️ config.json
-│   │   ├── ⚙️ modbus.json
+│   │   ├── ⚙️ .dockerignore
+│   │   ├── 🐳 Dockerfile
 │   │   ├── ⚙️ package-lock.json
 │   │   ├── ⚙️ package.json
 │   │   └── 📄 server.js
@@ -128,13 +148,13 @@ However, the EMS4DC can be adjusted to include different combination of energy a
 │       │   │   ├── 📄 page-optimization-debug.jsx
 │       │   │   ├── 📄 page-profile.jsx
 │       │   │   ├── 📄 page-settings.jsx
-│       │   │   ├── 📄 page-sys-info.jsx
 │       │   │   └── 📄 page-users.jsx
 │       │   ├── 🎨 App.css
 │       │   ├── 📄 App.jsx
 │       │   ├── 🎨 index.css
 │       │   └── 📄 main.jsx
-│       ├── ⚙️ .env.example
+│       ├── ⚙️ .dockerignore
+│       ├── 🐳 Dockerfile
 │       ├── ⚙️ components.json
 │       ├── 📄 eslint.config.js
 │       ├── 🌐 index.html
@@ -144,10 +164,12 @@ However, the EMS4DC can be adjusted to include different combination of energy a
 │       ├── 📄 postcss.config.js
 │       ├── 📄 tailwind.config.js
 │       └── 📄 vite.config.js
+├── ⚙️ .dockerignore
 ├── ⚙️ .gitignore
 ├── 📝 LICENSE.md
 ├── 📝 README.md
-└── 📄 ems-launcher.bat <-------------------- Batch script used for launching the system
+├── 📝 THIRD_PARTY_LICENSES.md
+└── ⚙️ docker-compose.yml <----------------- Main docker compose file
 ```
 
 ## Funding Acknowledgment

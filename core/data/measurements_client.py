@@ -19,7 +19,7 @@ limitations under the License.
 @Description: # TODO: Add desc
 
 @Created: 31st July 2025
-@Last Modified: 05 March 2026
+@Last Modified: 20 March 2026
 @Author: LeonGritsyuk-eaton
 
 @Version: v2.0.0
@@ -147,9 +147,12 @@ class ModbusDataReader:
                     else:
                         raw_bytes = int.to_bytes(raw_lo, 2, 'big') + int.to_bytes(raw_hi, 2, 'big')
                     val = struct.unpack(">f", raw_bytes)[0]
+                elif param['dataType'].lower() == 'int16':
+                    raw = result.registers[idx]
+                    # Re-interpret the unsigned 16-bit word as a signed int16
+                    val = raw if raw < 0x8000 else raw - 0x10000
                 else:
-                    val = result.registers[idx]
-                values[param['name']] = self.apply_scaling(val, param)
+                    val = result.registers[idx]   # uint16 / coil / etc. — stays unsigned
             return values
         except Exception as e:
             logger.error(f"Exception reading batch: {e}")
@@ -311,6 +314,10 @@ class ModbusDataReader:
                     return False
             else:
                 raw_value_int = int(raw_value)
+                if param['dataType'].lower() == 'int16':
+                    # Modbus write_register expects an unsigned 16-bit word.
+                    # Mask negative signed values into their two's-complement representation.
+                    raw_value_int = raw_value_int & 0xFFFF
                 if register_type == 'holding':
                     result = client.write_register(address, raw_value_int, device_id=modbus_id)
                 else:

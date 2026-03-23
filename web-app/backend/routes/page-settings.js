@@ -19,7 +19,7 @@ limitations under the License.
 @Description: # TODO: Add desc
 
 @Created: 1st February 2026
-@Last Modified: 27 February 2026
+@Last Modified: 19 March 2026
 @Author: LeonGritsyuk-eaton
 
 @Version: v2.0.0
@@ -727,49 +727,50 @@ router.post('/assets', async (req, res) => {
     
     const { name, type } = req.body;
     
-    // Validate required fields
     if (!name || !type) {
+      await client.query('ROLLBACK');
       return res.status(400).json({ error: 'name and type are required' });
     }
     
-    // Generate asset_key automatically
     const asset_key = await generateAssetKey(type);
     
-    // Insert asset
     const insertAssetQuery = `
       INSERT INTO assets (asset_key, name, type)
       VALUES ($1, $2, $3)
       RETURNING *
     `;
-    
     const assetResult = await client.query(insertAssetQuery, [asset_key, name, type]);
     const newAsset = assetResult.rows[0];
     
-    // Update config.json
-    await updateConfigFile(asset_key, name, type);
-    
-    // Update modbus.json
-    await updateModbusFile(asset_key, name, type);
-    
-    // Log creation event
-    const eventQuery = `
-      INSERT INTO asset_events (asset_id, event_type)
-      VALUES ($1, 'created')
-    `;
-    
-    await client.query(eventQuery, [newAsset.id]);
+    await client.query(
+      `INSERT INTO asset_events (asset_id, event_type) VALUES ($1, 'created')`,
+      [newAsset.id]
+    );
     
     await client.query('COMMIT');
+    
+    try {
+      await updateConfigFile(asset_key, name, type);
+      await updateModbusFile(asset_key, name, type);
+    } catch (fileError) {
+      console.error('Warning: asset created in DB but file update failed:', fileError);
+    }
+    
     res.status(201).json(newAsset);
     
   } catch (error) {
-    await client.query('ROLLBACK');
+    try {
+      await client.query('ROLLBACK');
+    } catch (rollbackError) {
+      console.error('Rollback failed:', rollbackError);
+    }
+    
     console.error('Error creating asset:', error);
     
-    if (error.code === '23505') { // Unique violation
+    if (error.code === '23505') {
       res.status(409).json({ error: 'Asset with this key already exists' });
     } else {
-      res.status(500).json({ error: 'Failed to create asset' });
+      res.status(500).json({ error: error.message || 'Failed to create asset' });
     }
   } finally {
     client.release();
@@ -843,54 +844,42 @@ router.put('/assets/:id', async (req, res) => {
 // Delete asset
 router.delete('/assets/:id', async (req, res) => {
   const client = await pool.connect();
-  
   try {
     await client.query('BEGIN');
-    
-    const { id } = req.params;
-    
-    // Get asset details before soft deletion
-    const getAssetQuery = 'SELECT * FROM assets WHERE id = $1';
-    const assetResult = await client.query(getAssetQuery, [id]);
-    
-    if (assetResult.rows.length === 0) {
+
+    const assetResult = await client.query('SELECT * FROM assets WHERE id = $1', [req.params.id]);
+    if (assetResult.rows.length === 0)
       return res.status(404).json({ error: 'Asset not found' });
-    }
-    
+
     const asset = assetResult.rows[0];
-    
-    // Check if already inactive
-    if (!asset.is_active) {
+    if (!asset.is_active)
       return res.status(400).json({ error: 'Asset already deleted' });
-    }
-    
-    // Remove from config files
-    await removeFromConfigFile(asset.asset_key);
-    await removeFromModbusFile(asset.asset_key);
-    
-    // Log deletion event
-    const eventQuery = `
-      INSERT INTO asset_events (asset_id, event_type)
-      VALUES ($1, 'deleted')
-    `;
-    await client.query(eventQuery, [id]);
-    
-    // Soft delete: Set is_active to false instead of deleting
-    const updateQuery = `
-      UPDATE assets 
-      SET is_active = false, updated_at = CURRENT_TIMESTAMP
-      WHERE id = $1 
-      RETURNING *
-    `;
-    const result = await client.query(updateQuery, [id]);
-    
+
+    // Log + soft delete inside transaction
+    await client.query(
+      `INSERT INTO asset_events (asset_id, event_type) VALUES ($1, 'deleted')`,
+      [asset.id]
+    );
+    const result = await client.query(
+      `UPDATE assets SET is_active = false, updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *`,
+      [req.params.id]
+    );
+
     await client.query('COMMIT');
+
+    try {
+      await removeFromConfigFile(asset.asset_key);
+      await removeFromModbusFile(asset.asset_key);
+    } catch (fileError) {
+      console.error('Warning: asset deleted in DB but file cleanup failed:', fileError);
+    }
+
     res.json({ message: 'Asset deleted', asset: result.rows[0] });
-    
+
   } catch (error) {
-    await client.query('ROLLBACK');
+    try { await client.query('ROLLBACK'); } catch (e) { console.error('Rollback failed:', e); }
     console.error('Error deleting asset:', error);
-    res.status(500).json({ error: 'Failed to delete asset' });
+    res.status(500).json({ error: error.message || 'Failed to delete asset' });
   } finally {
     client.release();
   }

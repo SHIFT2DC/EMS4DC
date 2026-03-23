@@ -19,7 +19,7 @@ limitations under the License.
 @Description: # TODO: Add desc
 
 @Created: 1st January 2025
-@Last Modified: 01 March 2026
+@Last Modified: 23 March 2026
 @Author: LeonGritsyuk-eaton
 
 @Version: v2.0.0
@@ -37,8 +37,7 @@ import cors from 'cors';
 
 // Import route modules
 import homePageRoutes from './routes/page-home.js';
-import chartsPageRoutes from './routes/page-charts.js'
-import sysInfoPageRoutes from './routes/page-sys-info.js';
+import chartsPageRoutes from './routes/page-charts.js';
 import emsPageRoutes from './routes/page-ems.js';
 import debugEMSPageRoutes from './routes/page-debug-optim.js';
 import droopCurvesPageRoutes from './routes/page-droop.js';
@@ -84,13 +83,11 @@ app.use('/api/auth', authRouter);
 app.use('/api', requireAuth);
 
 // Settings and sys-info require maintainer role
-app.use('/api/system-info', requireMaintainer);
 app.use('/api/settings', requireMaintainer);
 
 // Mount the endpoint routes
 app.use('/api/home', homePageRoutes);
 app.use('/api/chart-data', chartsPageRoutes);
-app.use('/api/system-info', sysInfoPageRoutes);
 app.use('/api/ems-data', emsPageRoutes);
 app.use('/api/ems-debug', debugEMSPageRoutes);
 app.use('/api/droop-curve', droopCurvesPageRoutes);

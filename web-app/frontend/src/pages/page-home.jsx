@@ -19,7 +19,7 @@ limitations under the License.
 @Description: # TODO: Add desc
 
 @Created: 1st January 2025
-@Last Modified: 06 March 2026
+@Last Modified: 23 March 2026
 @Author: LeonGritsyuk-eaton
 
 @Version: v2.0.0
@@ -49,10 +49,10 @@ const DEVICE_TYPE_ICONS = {
 }
 
 const getFlowLabels = (type) => {
-  if (type === "AFE")                        return { supply: "Importing", consume: "Exporting" };
-  if (type === "BI_EV" || type === "BESS")   return { supply: "Discharging", consume: "Charging" };
-  return                                            { supply: "Supplying", consume: "Consuming" };
-};
+  if (type === "AFE")                        return { supply: "Importing", consume: "Exporting" }
+  if (type === "BI_EV" || type === "BESS")   return { supply: "Discharging", consume: "Charging" }
+  return                                            { supply: "Supplying", consume: "Consuming" }
+}
 
 const DEVICE_TYPE_COLORS = {
   PV: "bg-yellow-50 border-yellow-300 text-yellow-700 hover:bg-yellow-100",
@@ -81,38 +81,27 @@ function DeviceCardSkeleton() {
 
 function TopologyDiagramSkeleton() {
   return (
-    <div className="max-w-7xl mx-auto bg-white rounded-xl shadow-xl p-8 border-2 border-gray-200">
-      {/* Top Row Skeleton */}
-      <div className="flex justify-evenly mb-8">
-        {[1, 2, 3, 4].map((i) => (
-          <DeviceCardSkeleton key={`top-${i}`} />
-        ))}
-      </div>
-
-      {/* DC Bus Skeleton */}
-      <div className="relative my-16">
-        <Skeleton className="h-12 w-full rounded-lg" />
-      </div>
-
-      {/* Bottom Row Skeleton */}
-      <div className="flex justify-evenly mt-8">
-        {[1, 2, 3, 4].map((i) => (
-          <DeviceCardSkeleton key={`bottom-${i}`} />
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function StatisticsPanelSkeleton() {
-  return (
-    <div className="max-w-7xl mx-auto mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-      {[1, 2, 3].map((i) => (
-        <div key={i} className="bg-white rounded-xl shadow-lg p-6 border-2 border-gray-200">
-          <Skeleton className="h-4 w-32 mb-2" />
-          <Skeleton className="h-10 w-24" />
+    <div className="flex gap-4 w-full">
+      <div className="flex-1 bg-white rounded-xl shadow-xl p-4 md:p-6 border-2 border-gray-200">
+        <div className="flex justify-evenly mb-8">
+          {[1, 2, 3, 4].map((i) => <DeviceCardSkeleton key={`top-${i}`} />)}
         </div>
-      ))}
+        <div className="relative my-16">
+          <Skeleton className="h-12 w-full rounded-lg" />
+        </div>
+        <div className="flex justify-evenly mt-8">
+          {[1, 2, 3, 4].map((i) => <DeviceCardSkeleton key={`bottom-${i}`} />)}
+        </div>
+      </div>
+      {/* Stats sidebar skeleton */}
+      <div className="w-52 flex flex-col gap-4">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="bg-white rounded-xl shadow-lg p-5 border-2 border-gray-200">
+            <Skeleton className="h-4 w-28 mb-3" />
+            <Skeleton className="h-9 w-20" />
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -132,10 +121,8 @@ function Home() {
   const loadDevices = async () => {
     setIsLoading(true)
     setError(null)
-
     try {
       const { data } = await api.get('/api/home')
-
       const transformedDevices = data.assets.map(asset => ({
         id: asset.id,
         type: asset.type,
@@ -143,7 +130,6 @@ function Home() {
         power: asset.power || 0,
         asset_key: asset.asset_key
       }))
-
       setDevices(transformedDevices)
       setLastUpdate(new Date(data.timestamp))
     } catch (err) {
@@ -160,7 +146,6 @@ function Home() {
     return () => clearInterval(interval)
   }, [])
 
-  // Split devices into top and bottom rows
   const topDevices = devices.slice(0, Math.ceil(devices.length / 2))
   const bottomDevices = devices.slice(Math.ceil(devices.length / 2))
 
@@ -193,14 +178,7 @@ function Home() {
 
         const direction = dev.power > 0 ? "inward" : dev.power < 0 ? "outward" : "idle"
 
-        results.push({
-          id: dev.id,
-          x1: startX,
-          y1: startY,
-          x2: endX,
-          y2: endY,
-          direction,
-        })
+        results.push({ id: dev.id, x1: startX, y1: startY, x2: endX, y2: endY, direction })
       })
     }
 
@@ -237,27 +215,36 @@ function Home() {
 
   if (isLoading && devices.length === 0) {
     return (
-      <div className="relative min-h-screen p-8">
-        {/* Header Skeleton */}
-        <div className="max-w-7xl mx-auto mb-8 flex justify-between items-center">
+      <div className="relative min-h-screen p-4 md:p-6">
+        <div className="max-w-7xl mx-auto mb-6 flex justify-between items-center">
           <div>
             <Skeleton className="h-8 w-80 mb-2" />
             <Skeleton className="h-4 w-48" />
           </div>
           <Skeleton className="h-10 w-24" />
         </div>
-
-        {/* Main Content Skeleton */}
-        <TopologyDiagramSkeleton />
-        <StatisticsPanelSkeleton />
+        <div className="max-w-7xl mx-auto">
+          <TopologyDiagramSkeleton />
+        </div>
       </div>
     )
   }
 
+  const totalGeneration = devices
+    .filter((d) => d.power > 0)
+    .reduce((sum, d) => sum + d.power / 1000, 0)
+    .toFixed(1)
+
+  const totalConsumption = Math.abs(
+    devices.filter((d) => d.power < 0).reduce((sum, d) => sum + d.power / 1000, 0)
+  ).toFixed(1)
+
+  const netPower = devices.reduce((sum, d) => sum + d.power / 1000, 0).toFixed(1)
+
   return (
-    <div className="relative p-8">
-      {/* Header Controls */}
-      <div className="max-w-7xl mx-auto mb-8 flex justify-between items-center">
+    <div className="relative p-4 md:p-6">
+      {/* Header */}
+      <div className="max-w-[1600px] mx-auto mb-4 flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">EMS | Building Demo Installation</h1>
           {lastUpdate && (
@@ -267,14 +254,14 @@ function Home() {
           )}
         </div>
         <Button onClick={loadDevices} variant="outline" disabled={isLoading}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
           Refresh
         </Button>
       </div>
 
       {/* Error Alert */}
       {error && (
-        <div className="max-w-7xl mx-auto mb-8">
+        <div className="max-w-[1600px] mx-auto mb-4">
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>{error}</AlertDescription>
@@ -282,9 +269,9 @@ function Home() {
         </div>
       )}
 
-      {/* No devices message */}
+      {/* No devices */}
       {!isLoading && devices.length === 0 && (
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-[1600px] mx-auto">
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
@@ -294,12 +281,16 @@ function Home() {
         </div>
       )}
 
-      {/* Main Topology Diagram */}
+      {/* Main content: diagram + sidebar stats side by side */}
       {devices.length > 0 && (
-        <>
-          <div ref={containerRef} className="max-w-7xl mx-auto bg-white rounded-xl shadow-xl p-8 border-2 border-gray-200 relative">
+        <div className="max-w-[1600px] mx-auto flex gap-4 items-stretch">
 
-            {/* Top Row Devices */}
+          {/* Topology Diagram — grows to fill available space */}
+          <div
+            ref={containerRef}
+            className="flex-1 min-w-0 bg-white rounded-xl shadow-xl p-4 md:p-6 border-2 border-gray-200 relative"
+          >
+            {/* Top Row */}
             <div className="flex justify-evenly mb-8">
               {topDevices.map((device) => (
                 <div key={device.id} ref={(el) => setDeviceRef(device.id, el)}>
@@ -310,19 +301,27 @@ function Home() {
 
             {/* DC Bus */}
             <div className="relative my-16">
-              <div ref={busRef} className="h-12 bg-gradient-to-r from-blue-600 via-blue-700 to-blue-600 rounded-lg shadow-lg flex items-center justify-center">
+              <div
+                ref={busRef}
+                className="h-12 bg-gradient-to-r from-blue-600 via-blue-700 to-blue-600 rounded-lg shadow-lg flex items-center justify-center"
+              >
                 <span className="text-white font-bold text-xl tracking-wider">DC BUS</span>
               </div>
             </div>
 
-            {/* SVG overlay for all connectors */}
-            <svg className="absolute inset-0 pointer-events-none" width="100%" height="100%" style={{ overflow: "visible" }}>
+            {/* SVG connectors */}
+            <svg
+              className="absolute inset-0 pointer-events-none"
+              width="100%"
+              height="100%"
+              style={{ overflow: "visible" }}
+            >
               {connectors.map((c) => (
                 <PowerFlow key={c.id} x1={c.x1} y1={c.y1} x2={c.x2} y2={c.y2} direction={c.direction} />
               ))}
             </svg>
 
-            {/* Bottom Row Devices */}
+            {/* Bottom Row */}
             <div className="flex justify-evenly mt-8">
               {bottomDevices.map((device) => (
                 <div key={device.id} ref={(el) => setDeviceRef(device.id, el)}>
@@ -332,32 +331,33 @@ function Home() {
             </div>
           </div>
 
-          {/* Statistics Panel */}
-          <div className="max-w-7xl mx-auto mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white rounded-xl shadow-lg p-6 border-2 border-gray-200">
-              <h3 className="text-sm font-semibold text-gray-600 mb-2">Total Generation</h3>
-              <p className="text-3xl font-bold text-green-600">
-                {devices
-                  .filter((d) => d.power > 0)
-                  .reduce((sum, d) => sum + d.power / 1000, 0)
-                  .toFixed(1)}{" "}
-                kW
-              </p>
+          {/* Statistics Sidebar */}
+          <div className="w-52 shrink-0 flex flex-col gap-4">
+            <div className="bg-white rounded-xl shadow-lg p-5 border-2 border-gray-200 flex flex-col gap-1">
+              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                Total Generation
+              </h3>
+              <p className="text-3xl font-bold text-green-600">{totalGeneration}</p>
+              <p className="text-sm text-gray-400 font-medium">kW</p>
             </div>
-            <div className="bg-white rounded-xl shadow-lg p-6 border-2 border-gray-200">
-              <h3 className="text-sm font-semibold text-gray-600 mb-2">Total Consumption</h3>
-              <p className="text-3xl font-bold text-red-600">
-                {Math.abs(devices.filter((d) => d.power < 0).reduce((sum, d) => sum + d.power / 1000, 0)).toFixed(1)} kW
-              </p>
+
+            <div className="bg-white rounded-xl shadow-lg p-5 border-2 border-gray-200 flex flex-col gap-1">
+              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                Total Consumption
+              </h3>
+              <p className="text-3xl font-bold text-red-600">{totalConsumption}</p>
+              <p className="text-sm text-gray-400 font-medium">kW</p>
             </div>
-            <div className="bg-white rounded-xl shadow-lg p-6 border-2 border-gray-200">
-              <h3 className="text-sm font-semibold text-gray-600 mb-2">Net Power</h3>
-              <p className="text-3xl font-bold text-blue-600">
-                {devices.reduce((sum, d) => sum + d.power / 1000, 0).toFixed(1)} kW
-              </p>
+
+            <div className="bg-white rounded-xl shadow-lg p-5 border-2 border-gray-200 flex flex-col gap-1">
+              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                Net Power
+              </h3>
+              <p className="text-3xl font-bold text-blue-600">{netPower}</p>
+              <p className="text-sm text-gray-400 font-medium">kW</p>
             </div>
           </div>
-        </>
+        </div>
       )}
     </div>
   )
@@ -384,21 +384,16 @@ function DeviceCard({ device, onClick }) {
         <div className="text-2xl font-bold">{Math.abs(device.power / 1000).toFixed(1)} kW</div>
         <div
           className={`text-xs font-semibold mt-1 ${
-            device.power > 0
-              ? "text-green-600"
-              : device.power < 0
-              ? "text-red-600"
-              : "text-gray-400"
+            device.power > 0 ? "text-green-600" : device.power < 0 ? "text-red-600" : "text-gray-400"
           }`}
         >
           {(() => {
-            const { supply, consume } = getFlowLabels(device.type);
-            return device.power > 10 ? `↓ ${supply}` : device.power < -10 ? `↑ ${consume}` : "Idle";
+            const { supply, consume } = getFlowLabels(device.type)
+            return device.power > 10 ? `↓ ${supply}` : device.power < -10 ? `↑ ${consume}` : "Idle"
           })()}
         </div>
       </div>
 
-      {/* Click hint */}
       <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
         <div className="text-xs bg-black bg-opacity-70 text-white px-2 py-1 rounded">
           Click for details

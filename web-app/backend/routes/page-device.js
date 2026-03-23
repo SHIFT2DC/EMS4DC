@@ -19,7 +19,7 @@ limitations under the License.
 @Description: # TODO: Add desc
 
 @Created: 1st February 2026
-@Last Modified: 27 February 2026
+@Last Modified: 20 March 2026
 @Author: LeonGritsyuk-eaton
 
 @Version: v2.0.0
@@ -80,9 +80,11 @@ router.get('/device/:assetKey', async (req, res) => {
     
     // Find the device's modbus configuration
     const deviceModbus = modbusConfig.devices?.find(d => d.assetKey === assetKey);
-    
-    // Get read parameters (exclude write-only parameters)
-    const parameters = deviceModbus?.parameters?.filter(p => p.mode === 'read') || [];
+
+    // Split parameters into read and write groups
+    const allParameters = deviceModbus?.parameters || [];
+    const readParameters = allParameters.filter(p => p.mode === 'read');
+    const writeParameters = allParameters.filter(p => p.mode === 'write');
     
     // Get current readings from the latest telemetry
     // Parameter names in telemetry table have format: {asset_key}_{PARAMETER_NAME}
@@ -134,7 +136,15 @@ router.get('/device/:assetKey', async (req, res) => {
         type: asset.type,
         created_at: asset.created_at
       },
-      parameters: parameters.map(p => ({
+      readParameters: readParameters.map(p => ({
+        id: p.id,
+        name: p.name,
+        unit: p.unit,
+        description: p.description,
+        decimalPlaces: p.decimalPlaces,
+        dataType: p.dataType
+      })),
+      writeParameters: writeParameters.map(p => ({
         id: p.id,
         name: p.name,
         unit: p.unit,

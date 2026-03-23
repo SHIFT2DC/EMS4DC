@@ -18,4 +18,4 @@ COPY . .
 
 EXPOSE 3001
 
-CMD ["nodemon", "server.js"]
+CMD ["nodemon", "--ignore", "conf/", "--ignore", "*.json", "server.js"]

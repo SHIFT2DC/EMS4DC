@@ -19,7 +19,7 @@ limitations under the License.
 @Description: TODO
 
 @Created: 11 February 2026
-@Last Modified: 05 March 2026
+@Last Modified: 20 March 2026
 @Author: Leon Gritsyuk
 
 @Version: v2.0.0
@@ -424,11 +424,11 @@ const MetricsDashboard = () => {
       fullDate:       format(periodEnd, 'MMM d'),
       timestamp:      item.period_end || item.period_start,
       grid_import:    (e.grid?.total_import_wh        || 0) / 1000,
-      grid_export:    (e.grid?.total_export_wh        || 0) / 1000,
+      grid_export:    -((e.grid?.total_export_wh        || 0) / 1000),
       renewable:      (e.renewable?.total_renewable_wh || 0) / 1000,
-      load:           (e.load?.total_load_wh           || 0) / 1000,
+      load:           -((e.load?.total_load_wh           || 0) / 1000),
       bess_soc:        e.bess?.avg_soc_percent          || 0,
-      bess_charge:    (e.bess?.total_charging_wh       || 0) / 1000,
+      bess_charge:    -((e.bess?.total_charging_wh       || 0) / 1000),
       bess_discharge: (e.bess?.total_discharging_wh    || 0) / 1000,
       ev_charge:      (e.ev?.total_charging_wh         || 0) / 1000,
     };
@@ -442,11 +442,11 @@ const MetricsDashboard = () => {
       month:          format(periodEnd, 'MMM yyyy'),
       timestamp:      item.period_end || item.period_start,
       grid_import:    (e.grid?.total_import_wh        || 0) / 1000,
-      grid_export:    (e.grid?.total_export_wh        || 0) / 1000,
+      grid_export:    -((e.grid?.total_export_wh        || 0) / 1000),
       renewable:      (e.renewable?.total_renewable_wh || 0) / 1000,
-      load:           (e.load?.total_load_wh           || 0) / 1000,
+      load:           -((e.load?.total_load_wh           || 0) / 1000),
       bess_soc:        e.bess?.avg_soc_percent          || 0,
-      bess_charge:    (e.bess?.total_charging_wh       || 0) / 1000,
+      bess_charge:    -((e.bess?.total_charging_wh       || 0) / 1000),
       bess_discharge: (e.bess?.total_discharging_wh    || 0) / 1000,
       ev_charge:      (e.ev?.total_charging_wh         || 0) / 1000,
     };
@@ -650,17 +650,27 @@ const MetricsDashboard = () => {
                   <stop offset="5%"  stopColor="#fbbf24" stopOpacity={0.8} />
                   <stop offset="95%" stopColor="#fbbf24" stopOpacity={0.1} />
                 </linearGradient>
-                <linearGradient id="loadGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#ef4444" stopOpacity={0.8} />
-                  <stop offset="95%" stopColor="#ef4444" stopOpacity={0.1} />
-                </linearGradient>
-                <linearGradient id="gridGrad" x1="0" y1="0" x2="0" y2="1">
+                {/* positive side */}
+                <linearGradient id="importGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%"  stopColor="#3b82f6" stopOpacity={0.8} />
                   <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1} />
                 </linearGradient>
-                <linearGradient id="bessGrad" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id="dischargeGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%"  stopColor="#10b981" stopOpacity={0.8} />
                   <stop offset="95%" stopColor="#10b981" stopOpacity={0.1} />
+                </linearGradient>
+                {/* negative side — gradients grow downward, so flip y */}
+                <linearGradient id="loadGrad" x1="0" y1="1" x2="0" y2="0">
+                  <stop offset="5%"  stopColor="#ef4444" stopOpacity={0.8} />
+                  <stop offset="95%" stopColor="#ef4444" stopOpacity={0.1} />
+                </linearGradient>
+                <linearGradient id="exportGrad" x1="0" y1="1" x2="0" y2="0">
+                  <stop offset="5%"  stopColor="#06b6d4" stopOpacity={0.8} />
+                  <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.1} />
+                </linearGradient>
+                <linearGradient id="chargeGrad" x1="0" y1="1" x2="0" y2="0">
+                  <stop offset="5%"  stopColor="#6366f1" stopOpacity={0.8} />
+                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0.1} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -679,10 +689,16 @@ const MetricsDashboard = () => {
                 ]}
               />
               <Legend />
-              <Area type="monotone" dataKey="renewable"   stroke="#fbbf24" fill="url(#renewableGrad)" name="Renewable (kWh)"  connectNulls={false} />
-              <Area type="monotone" dataKey="load"        stroke="#ef4444" fill="url(#loadGrad)"      name="Load (kWh)"        connectNulls={false} />
-              <Area type="monotone" dataKey="grid_import" stroke="#3b82f6" fill="url(#gridGrad)"      name="Grid Import (kWh)" connectNulls={false} />
-              <Area type="monotone" dataKey="bess_charge" stroke="#10b981" fill="url(#bessGrad)"      name="BESS Charge (kWh)" connectNulls={false} />
+              <ReferenceLine y={0} stroke="#9ca3af" strokeWidth={1.5} />
+              {/* ── positive series ── */}
+              <Area type="monotone" dataKey="renewable"     stroke="#fbbf24" fill="url(#renewableGrad)" name="Generation (kWh)"       connectNulls={false} />
+              <Area type="monotone" dataKey="grid_import"   stroke="#3b82f6" fill="url(#importGrad)"    name="Grid Import (kWh)"      connectNulls={false} />
+              <Area type="monotone" dataKey="bess_discharge" stroke="#10b981" fill="url(#dischargeGrad)" name="BESS Discharge (kWh)"  connectNulls={false} />
+
+              {/* ── negative series ── */}
+              <Area type="monotone" dataKey="load"        stroke="#ef4444" fill="url(#loadGrad)"   name="Load Consumption (kWh)" connectNulls={false} />
+              <Area type="monotone" dataKey="grid_export" stroke="#06b6d4" fill="url(#exportGrad)" name="Grid Export (kWh)"      connectNulls={false} />
+              <Area type="monotone" dataKey="bess_charge" stroke="#6366f1" fill="url(#chargeGrad)" name="BESS Charge (kWh)"      connectNulls={false} />
             </AreaChart>
           </ResponsiveContainer>
         </CardContent>

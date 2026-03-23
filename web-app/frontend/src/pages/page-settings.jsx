@@ -19,7 +19,7 @@ limitations under the License.
 @Description: # TODO: Add desc
 
 @Created: 1st February 2026
-@Last Modified: 18 February 2026
+@Last Modified: 20 March 2026
 @Author: LeonGritsyuk-eaton
 
 @Version: v2.0.0
@@ -96,12 +96,9 @@ export default function SettingsPage() {
   const handleCreateAsset = async (newAsset) => {
     try {
       const { data: createdAsset } = await api.post('/api/settings/assets', newAsset)
-      setAssets([...assets, createdAsset])
-      setIsCreateDialogOpen(false)
-      await loadData()
       toast({
         title: "Asset created successfully",
-        description: `${newAsset.name} (${createdAsset.asset_key}) has been added and configured.`,
+        description: `${newAsset.name} (${createdAsset.asset_key}) has been added.`,
       })
     } catch (error) {
       console.error("Error creating asset:", error)
@@ -110,6 +107,9 @@ export default function SettingsPage() {
         description: error.response?.data?.error || "Failed to create asset",
         variant: "destructive",
       })
+    } finally {
+      setIsCreateDialogOpen(false)
+      await loadData()
     }
   }
 
@@ -127,12 +127,12 @@ export default function SettingsPage() {
   const handleDeleteAsset = async (id) => {
     try {
       await api.delete(`/api/settings/assets/${id}`)
-      setAssets(assets.filter(a => a.id !== id))
-      await loadData()
-      toast({ title: "Asset deleted", description: "Asset has been deleted from database and configuration files." })
+      toast({ title: "Asset deleted", description: "Asset removed successfully." })
     } catch (error) {
       console.error("Error deleting asset:", error)
       toast({ title: "Error", description: "Failed to delete asset.", variant: "destructive" })
+    } finally {
+      await loadData()
     }
   }
 
@@ -567,9 +567,7 @@ function AssetEditor({ asset, globalConfig, modbusConfig, onUpdate, onDelete, on
 
       {/* Actions */}
       <div className="flex items-center justify-between pt-4 border-t">
-        <Button onClick={() => onDelete(asset.id)} variant="outline" size="sm" className="text-red-600 hover:text-red-700">
-          <Trash2 className="h-4 w-4 mr-2" />Delete Asset
-        </Button>
+        <DeleteAssetDialog asset={asset} onDelete={onDelete} />
         <Button onClick={handleSave} disabled={!hasChanges} size="sm">
           <Save className="h-4 w-4 mr-2" />Save Asset Info
         </Button>
@@ -597,7 +595,11 @@ function DeviceConfigEditor({ parameters, onChange }) {
       maxPower: "Maximum Power", maxChargeCurrent: "Maximum Charge Current",
       maxDischargeCurrent: "Maximum Discharge Current", capacity: "Capacity",
       minSOC: "Minimum State of Charge", maxSOC: "Maximum State of Charge",
-      priority: "Priority Level"
+      priority: "Priority Level",
+      droopVoltageUpperLimit: "Droop Voltage Upper Limit", droopVoltageLowerLimit: "Droop Voltage Lower Limit",
+      nominalVoltageDCBus: "Nominal Voltage on DC Bus",
+      droopPowerSupplyLimit: "Droop Power Supply Limit", droopPowerConsumeLimit: "Droop Power Consume Limit",
+      droopVoltageDeadband: "Droop Voltage Deadband"
     }
     return specialCases[param] || param.replace(/([A-Z])/g, " $1").trim()
   }
@@ -628,64 +630,165 @@ function DeviceConfigEditor({ parameters, onChange }) {
   )
 }
 
+// ── Modbus parameter row ──────────────────────────────────────────────────────
+//
+// Layout (always 12 cols, fixed regardless of data type):
+//   name(2) | regType(1) | addr(1) | id(1) | dataType(1) | endian(1) | scale(1) | offset(1) | dec(1) | unit(1) | actions(1)
+//
+// The Endianness (wordOrder) selector is always rendered but is visually
+// disabled and greyed-out when the data type is not float32.  This keeps
+// every row — and the static header — perfectly aligned at all times.
+//
+// A second, full-width row beneath the controls carries the description field.
+// ─────────────────────────────────────────────────────────────────────────────
 const ModbusParameterRow = memo(({ param, onUpdate, onRemove, canRemove }) => {
+  const isFloat32 = param.dataType === "float32"
+
   return (
-    <div className="grid grid-cols-12 gap-2 items-start py-2 border-b last:border-b-0">
-      <div className="col-span-2">
-        <Input value={param.name} onChange={(e) => onUpdate(param.id, "name", e.target.value)} placeholder="Name" className="h-8 text-sm" />
-      </div>
-      <div className="col-span-1">
-        <Select value={param.registerType} onValueChange={(value) => onUpdate(param.id, "registerType", value)}>
-          <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="holding">Holding</SelectItem>
-            <SelectItem value="input">Input</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="col-span-1">
-        <Input type="number" value={param.address} onChange={(e) => onUpdate(param.id, "address", e.target.value)} placeholder="Addr" className="h-8 text-sm" />
-      </div>
-      <div className="col-span-1">
-        <Input type="number" value={param.modbusId} onChange={(e) => onUpdate(param.id, "modbusId", e.target.value)} placeholder="ID" className="h-8 text-sm" />
-      </div>
-      <div className="col-span-1">
-        <Select value={param.dataType} onValueChange={(value) => onUpdate(param.id, "dataType", value)}>
-          <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="uint16">u16</SelectItem>
-            <SelectItem value="int16">i16</SelectItem>
-            <SelectItem value="float32">f32</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      {param.dataType === "float32" && (
+    <div className="border-b last:border-b-0 py-2 space-y-1.5">
+      {/* ── Control row ── */}
+      <div className="grid grid-cols-12 gap-2 items-start">
+        {/* Name */}
+        <div className="col-span-2">
+          <Input
+            value={param.name}
+            onChange={(e) => onUpdate(param.id, "name", e.target.value)}
+            placeholder="Name"
+            className="h-8 text-sm"
+          />
+        </div>
+
+        {/* Register type */}
         <div className="col-span-1">
-          <Select value={param.wordOrder} onValueChange={(value) => onUpdate(param.id, "wordOrder", value)}>
+          <Select value={param.registerType} onValueChange={(v) => onUpdate(param.id, "registerType", v)}>
             <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="holding">Holding</SelectItem>
+              <SelectItem value="input">Input</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Address */}
+        <div className="col-span-1">
+          <Input
+            type="number"
+            value={param.address}
+            onChange={(e) => onUpdate(param.id, "address", e.target.value)}
+            placeholder="Addr"
+            className="h-8 text-sm"
+          />
+        </div>
+
+        {/* Modbus ID */}
+        <div className="col-span-1">
+          <Input
+            type="number"
+            value={param.modbusId}
+            onChange={(e) => onUpdate(param.id, "modbusId", e.target.value)}
+            placeholder="ID"
+            className="h-8 text-sm"
+          />
+        </div>
+
+        {/* Data type */}
+        <div className="col-span-1">
+          <Select value={param.dataType} onValueChange={(v) => onUpdate(param.id, "dataType", v)}>
+            <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="uint16">u16</SelectItem>
+              <SelectItem value="int16">i16</SelectItem>
+              <SelectItem value="float32">f32</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Endianness — always present; disabled + muted when not float32 */}
+        <div className="col-span-1">
+          <Select
+            value={param.wordOrder ?? "big"}
+            onValueChange={(v) => onUpdate(param.id, "wordOrder", v)}
+            disabled={!isFloat32}
+          >
+            <SelectTrigger className={`h-8 text-xs transition-opacity ${!isFloat32 ? "opacity-35 cursor-not-allowed" : ""}`}>
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="big">BE</SelectItem>
               <SelectItem value="little">LE</SelectItem>
             </SelectContent>
           </Select>
         </div>
-      )}
-      <div className={param.dataType === "float32" ? "col-span-1" : "col-span-2"}>
-        <Input type="number" step="any" value={param.scaleFactor} onChange={(e) => onUpdate(param.id, "scaleFactor", e.target.value)} placeholder="Scale" className="h-8 text-sm" />
+
+        {/* Scale factor */}
+        <div className="col-span-1">
+          <Input
+            type="number"
+            step="any"
+            value={param.scaleFactor}
+            onChange={(e) => onUpdate(param.id, "scaleFactor", e.target.value)}
+            placeholder="Scale"
+            className="h-8 text-sm"
+          />
+        </div>
+
+        {/* Offset */}
+        <div className="col-span-1">
+          <Input
+            type="number"
+            step="any"
+            value={param.offset}
+            onChange={(e) => onUpdate(param.id, "offset", e.target.value)}
+            placeholder="Offset"
+            className="h-8 text-sm"
+          />
+        </div>
+
+        {/* Decimal places */}
+        <div className="col-span-1">
+          <Input
+            type="number"
+            min="0"
+            max="10"
+            value={param.decimalPlaces}
+            onChange={(e) => onUpdate(param.id, "decimalPlaces", e.target.value)}
+            placeholder="Dec"
+            className="h-8 text-sm"
+          />
+        </div>
+
+        {/* Unit */}
+        <div className="col-span-1">
+          <Input
+            value={param.unit}
+            onChange={(e) => onUpdate(param.id, "unit", e.target.value)}
+            placeholder="Unit"
+            className="h-8 text-sm"
+          />
+        </div>
+
+        {/* Delete */}
+        <div className="col-span-1 flex justify-end">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onRemove(param.id)}
+            disabled={!canRemove}
+            className="h-8 w-8 p-0"
+          >
+            <Trash2 className="h-3 w-3" />
+          </Button>
+        </div>
       </div>
-      <div className="col-span-1">
-        <Input type="number" step="any" value={param.offset} onChange={(e) => onUpdate(param.id, "offset", e.target.value)} placeholder="Offset" className="h-8 text-sm" />
-      </div>
-      <div className="col-span-1">
-        <Input type="number" min="0" max="10" value={param.decimalPlaces} onChange={(e) => onUpdate(param.id, "decimalPlaces", e.target.value)} placeholder="Dec" className="h-8 text-sm" />
-      </div>
-      <div className="col-span-1">
-        <Input value={param.unit} onChange={(e) => onUpdate(param.id, "unit", e.target.value)} placeholder="Unit" className="h-8 text-sm" />
-      </div>
-      <div className="col-span-1 flex justify-end">
-        <Button variant="ghost" size="sm" onClick={() => onRemove(param.id)} disabled={!canRemove} className="h-8 w-8 p-0">
-          <Trash2 className="h-3 w-3" />
-        </Button>
+
+      {/* ── Description row ── */}
+      <div>
+        <Input
+          value={param.description ?? ""}
+          onChange={(e) => onUpdate(param.id, "description", e.target.value)}
+          placeholder="Description (optional)"
+          className="h-7 text-xs text-muted-foreground placeholder:italic"
+        />
       </div>
     </div>
   )
@@ -697,14 +800,17 @@ function ModbusDeviceEditor({ device, onDeviceUpdate, onParamUpdate, onAddParam,
   const readParams  = device.parameters.filter(p => p.mode === "read")
   const writeParams = device.parameters.filter(p => p.mode === "write")
 
+  // Header matches the fixed 12-col row layout above exactly:
+  //   name(2) | regType(1) | addr(1) | id(1) | data(1) | endian(1) | scale(1) | offset(1) | dec(1) | unit(1) | _(1)
   const tableHeader = (
     <div className="grid grid-cols-12 gap-2 pb-2 mb-2 border-b font-medium text-xs text-muted-foreground">
       <div className="col-span-2">Name</div>
-      <div className="col-span-1">Type</div>
+      <div className="col-span-1">Reg Type</div>
       <div className="col-span-1">Addr</div>
       <div className="col-span-1">ID</div>
       <div className="col-span-1">Data</div>
-      <div className="col-span-2">Scale</div>
+      <div className="col-span-1">Endian</div>
+      <div className="col-span-1">Scale</div>
       <div className="col-span-1">Offset</div>
       <div className="col-span-1">Dec</div>
       <div className="col-span-1">Unit</div>
@@ -743,8 +849,13 @@ function ModbusDeviceEditor({ device, onDeviceUpdate, onParamUpdate, onAddParam,
             <CardContent className="p-3">
               {tableHeader}
               {readParams.map(param => (
-                <ModbusParameterRow key={param.id} param={param} onUpdate={onParamUpdate} onRemove={onRemoveParam}
-                  canRemove={readParams.length > 1 || writeParams.length > 0} />
+                <ModbusParameterRow
+                  key={param.id}
+                  param={param}
+                  onUpdate={onParamUpdate}
+                  onRemove={onRemoveParam}
+                  canRemove={readParams.length > 1 || writeParams.length > 0}
+                />
               ))}
             </CardContent>
           </Card>
@@ -764,8 +875,13 @@ function ModbusDeviceEditor({ device, onDeviceUpdate, onParamUpdate, onAddParam,
             <CardContent className="p-3">
               {tableHeader}
               {writeParams.map(param => (
-                <ModbusParameterRow key={param.id} param={param} onUpdate={onParamUpdate} onRemove={onRemoveParam}
-                  canRemove={writeParams.length > 1 || readParams.length > 0} />
+                <ModbusParameterRow
+                  key={param.id}
+                  param={param}
+                  onUpdate={onParamUpdate}
+                  onRemove={onRemoveParam}
+                  canRemove={writeParams.length > 1 || readParams.length > 0}
+                />
               ))}
             </CardContent>
           </Card>
@@ -824,6 +940,105 @@ function CreateAssetDialog({ onSubmit }) {
         </Button>
       </DialogFooter>
     </DialogContent>
+  )
+}
+
+function DeleteAssetDialog({ asset, onDelete }) {
+  const [open, setOpen] = useState(false)
+  const [inputValue, setInputValue] = useState("")
+
+  const confirmationKey = `${asset.asset_key}_${asset.name}/delete`
+  const isConfirmed = inputValue === confirmationKey
+
+  const handleOpen = () => {
+    setInputValue("")
+    setOpen(true)
+  }
+
+  const handleConfirm = () => {
+    onDelete(asset.id)
+    setOpen(false)
+  }
+
+  return (
+    <>
+      <Button onClick={handleOpen} variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+        <Trash2 className="h-4 w-4 mr-2" />Delete Asset
+      </Button>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <Trash2 className="h-5 w-5" />
+              Delete Asset
+            </DialogTitle>
+            <DialogDescription asChild>
+              <div className="space-y-3 pt-1">
+                <p className="text-sm text-foreground">
+                  Are you sure you want to delete{" "}
+                  <span className="font-semibold">{asset.name}</span>{" "}
+                  <span className="font-mono text-xs bg-muted px-1 py-0.5 rounded">{asset.asset_key}</span>?
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  This action may have serious{" "}
+                  <span className="group relative inline-block">
+                    <span className="underline decoration-dotted decoration-red-400 cursor-help font-semibold text-red-600">
+                      consequences
+                    </span>
+                    <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-72 rounded-md border bg-popover px-3 py-2 text-xs text-popover-foreground shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50">
+                      The configured asset may have historical data stored in the database — deleting it will permanently remove all associated records and measurements. Additionally, other system functions (such as optimizer routines, reports, or dashboards) may reference this asset's data, which could cause errors or data loss in those areas.
+                    </span>
+                  </span>
+                  {" "}and cannot be undone.
+                </p>
+                <div className="space-y-2 pt-1">
+                  <Label className="text-xs text-muted-foreground">
+                    To confirm, type{" "}
+                    <code className="bg-muted text-red-600 px-1 py-0.5 rounded text-xs font-mono select-all">
+                      {confirmationKey}
+                    </code>{" "}
+                    below:
+                  </Label>
+                  <Input
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    placeholder={confirmationKey}
+                    className={`font-mono text-sm ${
+                      inputValue && !isConfirmed ? "border-red-400 focus-visible:ring-red-400" : ""
+                    } ${isConfirmed ? "border-green-500 focus-visible:ring-green-500" : ""}`}
+                    onPaste={(e) => e.preventDefault()}
+                  />
+                  {inputValue && !isConfirmed && (
+                    <p className="text-xs text-red-500 flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" /> Text does not match
+                    </p>
+                  )}
+                  {isConfirmed && (
+                    <p className="text-xs text-green-600 flex items-center gap-1">
+                      <CheckCircle className="h-3 w-3" /> Confirmed
+                    </p>
+                  )}
+                </div>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirm}
+              disabled={!isConfirmed}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete Asset
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
 

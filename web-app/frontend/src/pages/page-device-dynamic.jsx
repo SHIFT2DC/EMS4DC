@@ -19,7 +19,7 @@ limitations under the License.
 @Description: # TODO: Add desc
 
 @Created: 1st February 2026
-@Last Modified: 18 February 2026
+@Last Modified: 20 March 2026
 @Author: LeonGritsyuk-eaton
 
 @Version: v2.0.0
@@ -111,7 +111,8 @@ function DeviceDynamicPage() {
 
   const [asset, setAsset] = useState(null)
   const [readings, setReadings] = useState({})
-  const [parameters, setParameters] = useState([])
+  const [readParameters, setReadParameters] = useState([])
+  const [writeParameters, setWriteParameters] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
   const [lastUpdate, setLastUpdate] = useState(null)
@@ -121,7 +122,8 @@ function DeviceDynamicPage() {
       setError(null)
       const { data } = await api.get(`/api/device/${assetKey}`)
       setAsset(data.asset)
-      setParameters(data.parameters)
+      setReadParameters(data.readParameters)
+      setWriteParameters(data.writeParameters)
       setReadings(data.readings)
       setLastUpdate(new Date(data.timestamp))
     } catch (err) {
@@ -174,8 +176,10 @@ function DeviceDynamicPage() {
   const typeConfig = ASSET_TYPE_CONFIG[asset.type] || ASSET_TYPE_CONFIG.LOAD
   const Icon = typeConfig.icon
 
-  // Group parameters by category for better organization
-  const groupedParams = groupParametersByCategory(parameters)
+  // Group read parameters by category
+  const groupedReadParams = groupParametersByCategory(readParameters)
+  // Group write parameters by category
+  const groupedWriteParams = groupParametersByCategory(writeParameters)
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -230,7 +234,7 @@ function DeviceDynamicPage() {
           <CardContent>
             <div className="text-center">
               <div className="text-5xl font-bold mb-2">
-                {formatValue(readings.POWER, findParameter(parameters, 'POWER'))}
+                {formatValue(readings.POWER, findParameter(readParameters, 'POWER'))}
               </div>
               <div className={`text-sm font-semibold ${
                 readings.POWER > 10 ? 'text-green-600' :
@@ -246,28 +250,74 @@ function DeviceDynamicPage() {
         </Card>
       )}
 
-      {/* All Parameters Grid */}
-      {Object.keys(groupedParams).map(category => (
-        <Card key={category}>
-          <CardHeader>
-            <CardTitle>{category}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {groupedParams[category].map(param => (
-                <ParameterCard
-                  key={param.id}
-                  parameter={param}
-                  value={readings[param.name]}
-                />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+      {/* Read Parameters */}
+      {readParameters.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg font-semibold text-gray-700">Read Parameters</h2>
+            <div className="flex-1 h-px bg-gray-200" />
+            <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200">
+              {readParameters.length} parameters
+            </Badge>
+          </div>
+
+          {Object.keys(groupedReadParams).map(category => (
+            <Card key={category} className="border-l-4 border-l-blue-400">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base text-gray-600">{category}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {groupedReadParams[category].map(param => (
+                    <ParameterCard
+                      key={param.id}
+                      parameter={param}
+                      value={readings[param.name]}
+                      mode="read"
+                    />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Write Parameters */}
+      {writeParameters.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg font-semibold text-gray-700">Write Parameters</h2>
+            <div className="flex-1 h-px bg-gray-200" />
+            <Badge variant="secondary" className="bg-orange-50 text-orange-700 border-orange-200">
+              {writeParameters.length} parameters
+            </Badge>
+          </div>
+
+          {Object.keys(groupedWriteParams).map(category => (
+            <Card key={category} className="border-l-4 border-l-orange-400">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base text-gray-600">{category}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {groupedWriteParams[category].map(param => (
+                    <ParameterCard
+                      key={param.id}
+                      parameter={param}
+                      value={readings[param.name]}
+                      mode="write"
+                    />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
       {/* No Parameters Message */}
-      {parameters.length === 0 && (
+      {readParameters.length === 0 && writeParameters.length === 0 && (
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
@@ -279,15 +329,20 @@ function DeviceDynamicPage() {
   )
 }
 
-function ParameterCard({ parameter, value }) {
+function ParameterCard({ parameter, value, mode }) {
   const isActive = value !== undefined && value !== null
+  const isWrite = mode === 'write'
 
   return (
     <div className={`p-4 rounded-lg border-2 ${
-      isActive ? 'bg-white border-blue-200' : 'bg-gray-50 border-gray-200'
+      isWrite
+        ? 'bg-orange-50 border-orange-200'
+        : isActive
+          ? 'bg-white border-blue-200'
+          : 'bg-gray-50 border-gray-200'
     }`}>
-      <div className="text-sm text-gray-600 mb-1">
-        {formatParameterName(parameter.name)}
+      <div className="text-sm text-gray-600 mb-1 font-mono">
+        {parameter.name}
       </div>
       <div className="text-2xl font-bold mb-1">
         {isActive ? formatValue(value, parameter) : '—'}
@@ -354,14 +409,6 @@ function formatValue(value, parameter) {
   const unit = parameter?.unit || ''
 
   return `${formatted} ${unit}`.trim()
-}
-
-function formatParameterName(name) {
-  // Convert snake_case and UPPER_CASE to Title Case
-  return name
-    .split('_')
-    .map(word => word.charAt(0) + word.slice(1).toLowerCase())
-    .join(' ')
 }
 
 function findParameter(parameters, name) {
