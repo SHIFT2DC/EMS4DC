@@ -19,7 +19,7 @@ limitations under the License.
 @Description: # TODO: Add desc
 
 @Created: 31st July 2025
-@Last Modified: 20 March 2026
+@Last Modified: 01 April 2026
 @Author: LeonGritsyuk-eaton
 
 @Version: v2.0.0
@@ -153,6 +153,7 @@ class ModbusDataReader:
                     val = raw if raw < 0x8000 else raw - 0x10000
                 else:
                     val = result.registers[idx]   # uint16 / coil / etc. — stays unsigned
+                values[param['name']] = self.apply_scaling(val, param)
             return values
         except Exception as e:
             logger.error(f"Exception reading batch: {e}")

@@ -44,7 +44,6 @@ const DEVICE_TYPE_ICONS = {
   UNI_EV: Car,
   BI_EV: Zap,
   WIND: Wind,
-  GRID: Grid3x3,
   AFE: Grid3x3
 }
 
@@ -62,7 +61,6 @@ const DEVICE_TYPE_COLORS = {
   UNI_EV: "bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100",
   BI_EV: "bg-purple-50 border-purple-300 text-purple-700 hover:bg-purple-100",
   WIND: "bg-teal-50 border-teal-300 text-teal-700 hover:bg-teal-100",
-  GRID: "bg-orange-50 border-orange-300 text-orange-700 hover:bg-orange-100",
   AFE: "bg-indigo-50 border-indigo-300 text-indigo-700 hover:bg-indigo-100"
 }
 

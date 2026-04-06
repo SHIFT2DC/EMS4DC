@@ -19,7 +19,7 @@ limitations under the License.
 @Description: # TODO: Add desc
 
 @Created: 1st February 2026
-@Last Modified: 20 March 2026
+@Last Modified: 23 March 2026
 @Author: LeonGritsyuk-eaton
 
 @Version: v2.0.0
@@ -51,7 +51,6 @@ const ASSET_TYPES = {
   UNI_EV:        { label: "Unidirectional EV",    color: "bg-blue-100 text-blue-800",    icon: "🚗" },
   BI_EV:         { label: "Bidirectional EV",     color: "bg-purple-100 text-purple-800",icon: "🔄" },
   WIND:          { label: "Wind Generator",        color: "bg-teal-100 text-teal-800",    icon: "💨" },
-  GRID:          { label: "Grid Connection",       color: "bg-orange-100 text-orange-800",icon: "🔌" },
   AFE:           { label: "Active Front End",      color: "bg-indigo-100 text-indigo-800",icon: "⚙️" }
 }
 

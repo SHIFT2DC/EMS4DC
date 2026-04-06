@@ -19,7 +19,7 @@ limitations under the License.
 @Description: # TODO: Add desc
 
 @Created: 1st February 2026
-@Last Modified: 19 March 2026
+@Last Modified: 01 April 2026
 @Author: LeonGritsyuk-eaton
 
 @Version: v2.0.0
@@ -64,34 +64,6 @@ const ASSET_CONFIG_TEMPLATES = {
         description: "REQUIRED: Power of the PV in Watts",
         wordOrder: "big",
         mode: "read"
-      },
-      {
-        name: "VOLTAGE",
-        registerType: "holding",
-        address: 3,
-        modbusId: 1,
-        dataType: "float32",
-        scaleFactor: 1,
-        offset: 0,
-        decimalPlaces: 2,
-        unit: "V",
-        description: "DC Voltage",
-        wordOrder: "big",
-        mode: "read"
-      },
-      {
-        name: "CURRENT",
-        registerType: "holding",
-        address: 5,
-        modbusId: 1,
-        dataType: "float32",
-        scaleFactor: 1,
-        offset: 0,
-        decimalPlaces: 2,
-        unit: "A",
-        description: "DC Current",
-        wordOrder: "big",
-        mode: "read"
       }
     ]
   },
@@ -126,12 +98,12 @@ const ASSET_CONFIG_TEMPLATES = {
         offset: 0,
         decimalPlaces: 0,
         unit: "W",
-        description: "REQUIRED: Battery power (positive=charging, negative=discharging)",
+        description: "REQUIRED: Battery power (positive=discharging, negative=charging)",
         wordOrder: "big",
         mode: "read"
       },
       {
-        name: "SOC",
+        name: "SoC",
         registerType: "holding",
         address: 3,
         modbusId: 1,
@@ -140,35 +112,7 @@ const ASSET_CONFIG_TEMPLATES = {
         offset: 0,
         decimalPlaces: 1,
         unit: "%",
-        description: "State of Charge",
-        wordOrder: "big",
-        mode: "read"
-      },
-      {
-        name: "VOLTAGE",
-        registerType: "holding",
-        address: 5,
-        modbusId: 1,
-        dataType: "float32",
-        scaleFactor: 1,
-        offset: 0,
-        decimalPlaces: 2,
-        unit: "V",
-        description: "Battery Voltage",
-        wordOrder: "big",
-        mode: "read"
-      },
-      {
-        name: "CURRENT",
-        registerType: "holding",
-        address: 7,
-        modbusId: 1,
-        dataType: "float32",
-        scaleFactor: 1,
-        offset: 0,
-        decimalPlaces: 2,
-        unit: "A",
-        description: "Battery Current",
+        description: "REQUIRED: State of Charge in percent",
         wordOrder: "big",
         mode: "read"
       }
@@ -195,34 +139,6 @@ const ASSET_CONFIG_TEMPLATES = {
         description: "REQUIRED: Load power consumption",
         wordOrder: "big",
         mode: "read"
-      },
-      {
-        name: "VOLTAGE",
-        registerType: "holding",
-        address: 3,
-        modbusId: 1,
-        dataType: "float32",
-        scaleFactor: 1,
-        offset: 0,
-        decimalPlaces: 2,
-        unit: "V",
-        description: "Load Voltage",
-        wordOrder: "big",
-        mode: "read"
-      },
-      {
-        name: "CURRENT",
-        registerType: "holding",
-        address: 5,
-        modbusId: 1,
-        dataType: "float32",
-        scaleFactor: 1,
-        offset: 0,
-        decimalPlaces: 2,
-        unit: "A",
-        description: "Load Current",
-        wordOrder: "big",
-        mode: "read"
       }
     ]
   },
@@ -246,20 +162,6 @@ const ASSET_CONFIG_TEMPLATES = {
         decimalPlaces: 0,
         unit: "W",
         description: "REQUIRED: Critical load power consumption",
-        wordOrder: "big",
-        mode: "read"
-      },
-      {
-        name: "VOLTAGE",
-        registerType: "holding",
-        address: 3,
-        modbusId: 1,
-        dataType: "float32",
-        scaleFactor: 1,
-        offset: 0,
-        decimalPlaces: 2,
-        unit: "V",
-        description: "Critical Load Voltage",
         wordOrder: "big",
         mode: "read"
       }
@@ -289,7 +191,7 @@ const ASSET_CONFIG_TEMPLATES = {
         mode: "read"
       },
       {
-        name: "SOC",
+        name: "SoC",
         registerType: "holding",
         address: 3,
         modbusId: 1,
@@ -298,10 +200,38 @@ const ASSET_CONFIG_TEMPLATES = {
         offset: 0,
         decimalPlaces: 1,
         unit: "%",
-        description: "EV Battery State of Charge",
+        description: "REQUIRED: EV Battery State of Charge",
         wordOrder: "big",
         mode: "read"
-      }
+      },
+      {
+        name: "CAR_CAP",
+        registerType: "holding",
+        address: 5,
+        modbusId: 1,
+        dataType: "float32",
+        scaleFactor: 1,
+        offset: 0,
+        decimalPlaces: 1,
+        unit: "Wh",
+        description: "REQUIRED: Capacity of the car connected to the unidirectional EV charger",
+        wordOrder: "big",
+        mode: "read"
+      },
+      {
+        name: "CAR_MAX_POWER",
+        registerType: "holding",
+        address: 7,
+        modbusId: 1,
+        dataType: "float32",
+        scaleFactor: 1,
+        offset: 0,
+        decimalPlaces: 1,
+        unit: "W",
+        description: "REQUIRED: The maximum power the car can accept",
+        wordOrder: "big",
+        mode: "read"
+      },
     ]
   },
   BI_EV: {
@@ -324,12 +254,12 @@ const ASSET_CONFIG_TEMPLATES = {
         offset: 0,
         decimalPlaces: 0,
         unit: "W",
-        description: "REQUIRED: EV power (positive=charging, negative=V2G discharging)",
+        description: "REQUIRED: EV power (negative=charging, positive=V2G discharging)",
         wordOrder: "big",
         mode: "read"
       },
       {
-        name: "SOC",
+        name: "SoC",
         registerType: "holding",
         address: 3,
         modbusId: 1,
@@ -338,10 +268,66 @@ const ASSET_CONFIG_TEMPLATES = {
         offset: 0,
         decimalPlaces: 1,
         unit: "%",
-        description: "EV Battery State of Charge",
+        description: "REQUIRED: EV Battery State of Charge",
         wordOrder: "big",
         mode: "read"
-      }
+      },
+      {
+        name: "CAR_CAP",
+        registerType: "holding",
+        address: 5,
+        modbusId: 1,
+        dataType: "float32",
+        scaleFactor: 1,
+        offset: 0,
+        decimalPlaces: 1,
+        unit: "Wh",
+        description: "REQUIRED: Capacity of the battery of the car connected to the bidirectional EV charger",
+        wordOrder: "big",
+        mode: "read"
+      },
+      {
+        name: "CAR_MAX_POWER",
+        registerType: "holding",
+        address: 7,
+        modbusId: 1,
+        dataType: "float32",
+        scaleFactor: 1,
+        offset: 0,
+        decimalPlaces: 1,
+        unit: "W",
+        description: "REQUIRED: Maximum power the car connected to the bidirectional EV charger can provide/accept",
+        wordOrder: "big",
+        mode: "read"
+      },
+      {
+        name: "CAR_AVBL",
+        registerType: "holding",
+        address: 9,
+        modbusId: 1,
+        dataType: "float32",
+        scaleFactor: 1,
+        offset: 0,
+        decimalPlaces: 1,
+        unit: "-",
+        description: "REQUIRED: Parameter which indicates if the car can discharge at the moment: 1 if the car can provide power, 0 if not",
+        wordOrder: "big",
+        mode: "read"
+      },
+      {
+        name: "CAR_ARRIVAL",
+        registerType: "holding",
+        address: 11,
+        modbusId: 1,
+        dataType: "float32",
+        scaleFactor: 1,
+        offset: 0,
+        decimalPlaces: 1,
+        unit: "%",
+        description: "REQUIRED: SoC of the car at the moment of arrival",
+        wordOrder: "big",
+        mode: "read"
+      }       
     ]
   },
   WIND: {
@@ -363,73 +349,6 @@ const ASSET_CONFIG_TEMPLATES = {
         decimalPlaces: 0,
         unit: "W",
         description: "REQUIRED: Wind generator power",
-        wordOrder: "big",
-        mode: "read"
-      },
-      {
-        name: "WIND_SPEED",
-        registerType: "holding",
-        address: 3,
-        modbusId: 1,
-        dataType: "float32",
-        scaleFactor: 1,
-        offset: 0,
-        decimalPlaces: 1,
-        unit: "m/s",
-        description: "Wind speed",
-        wordOrder: "big",
-        mode: "read"
-      }
-    ]
-  },
-  GRID: {
-    config: {
-      maxVoltage: 800,
-      minVoltage: 600,
-      maxImportCurrent: 100,
-      maxExportCurrent: 100,
-      maxPower: 50000,
-    },
-    modbus: [
-      {
-        name: "POWER",
-        registerType: "holding",
-        address: 1,
-        modbusId: 1,
-        dataType: "float32",
-        scaleFactor: 1,
-        offset: 0,
-        decimalPlaces: 0,
-        unit: "W",
-        description: "REQUIRED: Grid power (positive=importing, negative=exporting)",
-        wordOrder: "big",
-        mode: "read"
-      },
-      {
-        name: "VOLTAGE",
-        registerType: "holding",
-        address: 3,
-        modbusId: 1,
-        dataType: "float32",
-        scaleFactor: 1,
-        offset: 0,
-        decimalPlaces: 2,
-        unit: "V",
-        description: "Grid Voltage",
-        wordOrder: "big",
-        mode: "read"
-      },
-      {
-        name: "FREQUENCY",
-        registerType: "holding",
-        address: 5,
-        modbusId: 1,
-        dataType: "float32",
-        scaleFactor: 1,
-        offset: 0,
-        decimalPlaces: 2,
-        unit: "Hz",
-        description: "Grid Frequency",
         wordOrder: "big",
         mode: "read"
       }
@@ -464,16 +383,30 @@ const ASSET_CONFIG_TEMPLATES = {
         mode: "read"
       },
       {
-        name: "DC_VOLTAGE",
+        name: "AVBL",
         registerType: "holding",
         address: 3,
         modbusId: 1,
         dataType: "float32",
         scaleFactor: 1,
         offset: 0,
-        decimalPlaces: 2,
-        unit: "V",
-        description: "DC Bus Voltage",
+        decimalPlaces: 0,
+        unit: "-",
+        description: "REQUIRED: Availability of the AFE: 1 for available, 0 for not active",
+        wordOrder: "big",
+        mode: "read"
+      },
+      {
+        name: "GRIDSRVC",
+        registerType: "holding",
+        address: 5,
+        modbusId: 1,
+        dataType: "float32",
+        scaleFactor: 1,
+        offset: 0,
+        decimalPlaces: 0,
+        unit: "W",
+        description: "REQUIRED: Grid service amount of the AC/DC point",
         wordOrder: "big",
         mode: "read"
       }

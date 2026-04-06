@@ -19,7 +19,7 @@ limitations under the License.
 @Description: # TODO: Add desc
 
 @Created: 1st July 2025
-@Last Modified: 27 February 2026
+@Last Modified: 01 April 2026
 @Author: LeonGritsyuk-eaton
 
 @Version: v2.0.0
@@ -49,8 +49,8 @@ class OptimizerMode:
     pair; this class only decides *what value* to write and under *which key*.
 
     Setpoint sign convention (consistent across all device types):
-      Negative  → power flowing INTO the DC bus  (charging, consuming)
-      Positive  → power flowing OUT OF the DC bus (discharging, generating)
+      Positive  → power flowing INTO the DC bus  (Discharging, generating)
+      Negative  → power flowing OUT OF the DC bus (charging, consuming)
     """
 
     def __init__(self, config: Dict[str, Any]):
@@ -146,8 +146,8 @@ class OptimizerMode:
         for afe_id, d in optimizer_output.get('afe', {}).items():
             imp = d.get('imp', 0.0)
             exp = d.get('exp', 0.0)
-            # Negative → drawing power from grid (import mode)
-            # Positive → pushing power to grid (export mode)
+            # Positive → drawing power from grid (import mode)
+            # Negative → pushing power to grid (export mode)
             if imp != 0 and exp == 0:
                 afe_power_setpoint = imp
             elif imp == 0 and exp != 0:
@@ -159,7 +159,7 @@ class OptimizerMode:
             }
 
         # ── PV ────────────────────────────────────────────────────────────────
-        # Negative → generation (power flows out of the panel)
+        # Positive → generation (power flows out of the panel INTO the DC bus)
         for pv_id, d in optimizer_output.get('pv', {}).items():
             setpoints[pv_id] = {
                 'POWER_SETPOINT': round(d.get('power', 0.0), 4),

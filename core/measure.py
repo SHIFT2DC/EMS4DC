@@ -19,7 +19,7 @@ limitations under the License.
 @Description: TODO
 
 @Created: 11 February 2026
-@Last Modified: 05 March 2026
+@Last Modified: 01 April 2026
 @Author: Leon Gritsyuk
 
 @Version: v2.0.0
@@ -125,7 +125,6 @@ class MeasurementsManager:
                 data = json.loads(data)
 
             now = current_time()
-            self.logger.info(f"DEBUG:MEASURE.PY: now: {now}")
             data_to_insert_to_db = []
 
             param_id = 1

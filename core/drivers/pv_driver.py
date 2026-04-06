@@ -23,7 +23,6 @@ limitations under the License.
 @Author: Leon Gritsyuk
 
 @Version: v2.0.0
-
 '''
 
 import json
