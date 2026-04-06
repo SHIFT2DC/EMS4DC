@@ -172,6 +172,10 @@ However, the EMS4DC can be adjusted to include different combination of energy a
 └── ⚙️ docker-compose.yml <----------------- Main docker compose file
 ```
 
+## Scientific Research
+If the EMS4DC is used in Your scientific research please cite using Zenodo Digital Object Identifier (DOI):
+[![DOI](https://zenodo.org/badge/1088890532.svg)](https://doi.org/10.5281/zenodo.19442727)
+
 ## Funding Acknowledgment
 
 This project has received funding from the European Union's Horizon Europe research and innovation programme under grant agreement No. 101136131.
