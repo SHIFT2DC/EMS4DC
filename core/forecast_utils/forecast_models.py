@@ -16,13 +16,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 @File: forecasting_models.py
-@Description: Base forecasting models for different asset types. Supports multiple forecasting approaches: Prophet, SARIMA, and simple baseline models.
+@Description: Base forecasting models for different asset types. Supports multiple forecasting approaches: Prophet and simple baseline models.
 
 @Created: 08 February 2026
-@Last Modified: 05 March 2026
+@Last Modified: 14 April 2026
 @Author: LeonGritsyuk-eaton
 
-@Version: v2.0.0
+@Version: v2.0.1
 '''
 
 

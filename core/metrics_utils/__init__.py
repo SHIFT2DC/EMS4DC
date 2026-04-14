@@ -22,6 +22,6 @@ limitations under the License.
 @Last Modified: 10 February 2026
 @Author: Leon Gritsyuk
 
-@Version: v2.0.0
+@Version: v2.0.1
 
 '''

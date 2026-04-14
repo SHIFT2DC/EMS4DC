@@ -22,7 +22,7 @@ Description: # TODO: Add desc
 @Last Modified: 16 February 2026
 @Author: LeonGritsyuk-eaton
 
-@Version: v2.0.0
+@Version: v2.0.1
 '''
 
 

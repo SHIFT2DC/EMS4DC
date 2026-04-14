@@ -19,10 +19,10 @@ limitations under the License.
 @Description: TODO
 
 @Created: 11 February 2026
-@Last Modified: 20 March 2026
+@Last Modified: 14 April 2026
 @Author: Leon Gritsyuk
 
-@Version: v2.0.0
+@Version: v2.0.1
 */
 
 
@@ -430,7 +430,8 @@ const MetricsDashboard = () => {
       bess_soc:        e.bess?.avg_soc_percent          || 0,
       bess_charge:    -((e.bess?.total_charging_wh       || 0) / 1000),
       bess_discharge: (e.bess?.total_discharging_wh    || 0) / 1000,
-      ev_charge:      (e.ev?.total_charging_wh         || 0) / 1000,
+      ev_charge:      -((e.ev?.total_charging_wh         || 0) / 1000),
+      ev_discharge:   (e.ev?.total_discharging_wh      || 0) / 1000,
     };
   });
 
@@ -448,7 +449,8 @@ const MetricsDashboard = () => {
       bess_soc:        e.bess?.avg_soc_percent          || 0,
       bess_charge:    -((e.bess?.total_charging_wh       || 0) / 1000),
       bess_discharge: (e.bess?.total_discharging_wh    || 0) / 1000,
-      ev_charge:      (e.ev?.total_charging_wh         || 0) / 1000,
+      ev_charge:      -((e.ev?.total_charging_wh         || 0) / 1000),
+      ev_discharge:   (e.ev?.total_discharging_wh      || 0) / 1000,
     };
   });
 
@@ -472,6 +474,7 @@ const MetricsDashboard = () => {
         bess_charge:    null,
         bess_discharge: null,
         ev_charge:      null,
+        ev_discharge:   null, 
       };
     });
   };
@@ -659,6 +662,10 @@ const MetricsDashboard = () => {
                   <stop offset="5%"  stopColor="#10b981" stopOpacity={0.8} />
                   <stop offset="95%" stopColor="#10b981" stopOpacity={0.1} />
                 </linearGradient>
+                <linearGradient id="evDischargeGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%"  stopColor="#a855f7" stopOpacity={0.8} />
+                  <stop offset="95%" stopColor="#a855f7" stopOpacity={0.1} />
+                </linearGradient>
                 {/* negative side — gradients grow downward, so flip y */}
                 <linearGradient id="loadGrad" x1="0" y1="1" x2="0" y2="0">
                   <stop offset="5%"  stopColor="#ef4444" stopOpacity={0.8} />
@@ -671,6 +678,10 @@ const MetricsDashboard = () => {
                 <linearGradient id="chargeGrad" x1="0" y1="1" x2="0" y2="0">
                   <stop offset="5%"  stopColor="#6366f1" stopOpacity={0.8} />
                   <stop offset="95%" stopColor="#6366f1" stopOpacity={0.1} />
+                </linearGradient>
+                <linearGradient id="evGrad" x1="0" y1="1" x2="0" y2="0">
+                  <stop offset="5%"  stopColor="#f97316" stopOpacity={0.8} />
+                  <stop offset="95%" stopColor="#f97316" stopOpacity={0.1} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -694,11 +705,13 @@ const MetricsDashboard = () => {
               <Area type="monotone" dataKey="renewable"     stroke="#fbbf24" fill="url(#renewableGrad)" name="Generation (kWh)"       connectNulls={false} />
               <Area type="monotone" dataKey="grid_import"   stroke="#3b82f6" fill="url(#importGrad)"    name="Grid Import (kWh)"      connectNulls={false} />
               <Area type="monotone" dataKey="bess_discharge" stroke="#10b981" fill="url(#dischargeGrad)" name="BESS Discharge (kWh)"  connectNulls={false} />
+              <Area type="monotone" dataKey="ev_discharge" stroke="#a855f7" fill="url(#evDischargeGrad)" name="EV V2G Discharge (kWh)" connectNulls={false} />
 
               {/* ── negative series ── */}
               <Area type="monotone" dataKey="load"        stroke="#ef4444" fill="url(#loadGrad)"   name="Load Consumption (kWh)" connectNulls={false} />
               <Area type="monotone" dataKey="grid_export" stroke="#06b6d4" fill="url(#exportGrad)" name="Grid Export (kWh)"      connectNulls={false} />
               <Area type="monotone" dataKey="bess_charge" stroke="#6366f1" fill="url(#chargeGrad)" name="BESS Charge (kWh)"      connectNulls={false} />
+              <Area type="monotone" dataKey="ev_charge" stroke="#f97316" fill="url(#evGrad)" name="EV Charging (kWh)" connectNulls={false} />
             </AreaChart>
           </ResponsiveContainer>
         </CardContent>

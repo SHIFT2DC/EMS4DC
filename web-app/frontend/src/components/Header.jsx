@@ -22,7 +22,7 @@ limitations under the License.
 @Last Modified: 20 March 2026
 @Author: LeonGritsyuk-eaton
 
-@Version: v2.0.0
+@Version: v2.0.1
 */
 
 import { useState, useEffect, useRef } from "react"
