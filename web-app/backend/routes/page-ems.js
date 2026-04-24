@@ -19,17 +19,41 @@ limitations under the License.
 @Description: # TODO: Add desc
 
 @Created: 24th November 2025
-@Last Modified: 23 February 2026
+@Last Modified: 24 April 2026
 @Author: LeonGritsyuk-eaton
 
-@Version: v2.0.1
+@Version: v2.0.2
 */
 
 
 import { pool } from '../db/pool.js';
 import express from 'express';
+import fs      from 'fs';
+import path    from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname  = path.dirname(__filename);
 
 const router = express.Router();
+
+// ── Load config once at startup ───────────────────────────────────────────────
+const configPath = path.join(__dirname, './../conf/config.json');
+let siteConfig = { devices: [] };
+try {
+  siteConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+} catch (err) {
+  console.warn('Could not load config.json:', err.message);
+}
+
+/** Returns capacity in kWh for a given asset_key (= device id in config) */
+const getBessCapacity = (assetKey) => {
+  const device = siteConfig.devices?.find(d => d.id === assetKey && d.type === 'BESS');
+  // config stores capacity in Wh → convert to kWh
+  return device?.parameters?.capacity != null
+    ? device.parameters.capacity / 1000
+    : null;
+};
 
 // ── Active assets ─────────────────────────────────────────────────────────────
 router.get('/active-assets', async (req, res) => {
@@ -104,28 +128,29 @@ router.get('/:date', async (req, res) => {
     const uniEvAssets = byType('UNI_EV');
     const biEvAssets  = byType('BI_EV');
 
+    // ── Build BESS capacity map ───────────────────────────────────────────────
+    // { asset_key -> capacity_kWh }  (null if not found in config)
+    const bessCapacities = Object.fromEntries(
+      bessAssets.map(a => [a.asset_key, getBessCapacity(a.asset_key)])
+    );
+
     // ── Build output parameter list ───────────────────────────────────────────
-    // Aggregate grid scalars
     const gridParams = ['imp', 'exp', 'exp1', 'exp2'];
 
-    // Per-AFE output params
     const afeOutputParams = afeAssets.flatMap(a => [
       `${a.asset_key}_imp`, `${a.asset_key}_exp`,
       `${a.asset_key}_exp1`, `${a.asset_key}_exp2`
     ]);
 
-    // Per-PV / Wind / Load / CLoad output params
     const pvOutputParams    = pvAssets.map(a    => `${a.asset_key}_power`);
     const windOutputParams  = windAssets.map(a  => `${a.asset_key}_power`);
     const loadOutputParams  = loadAssets.map(a  => `${a.asset_key}_power`);
     const cloadOutputParams = cloadAssets.map(a => `${a.asset_key}_power`);
 
-    // Per-BESS output params
     const bessOutputParams = bessAssets.flatMap(a => [
       `${a.asset_key}_charge`, `${a.asset_key}_discharge`, `${a.asset_key}_level`
     ]);
 
-    // Per-EV output params
     const uniEvOutputParams = uniEvAssets.flatMap(a => [
       `${a.asset_key}_charge`, `${a.asset_key}_soc`
     ]);
@@ -146,12 +171,10 @@ router.get('/:date', async (req, res) => {
     ];
 
     // ── Build input parameter list ────────────────────────────────────────────
-    // Per-AFE input params
     const afeInputParams = afeAssets.flatMap(a => [
       `${a.asset_key}_max`, `${a.asset_key}_available`, `${a.asset_key}_grid_svc`
     ]);
 
-    // Per-PV / Wind / Load / CLoad forecast params
     const pvInputParams    = pvAssets.map(a    => `${a.asset_key}_power_fct`);
     const windInputParams  = windAssets.map(a  => `${a.asset_key}_power_fct`);
     const loadInputParams  = loadAssets.map(a  => `${a.asset_key}_power_fct`);
@@ -165,11 +188,19 @@ router.get('/:date', async (req, res) => {
       ...cloadInputParams
     ];
 
-    // ── Measurement params (EV charger real-time readings) ────────────────────
+    // ── Measurement params ────────────────────────────────────────────────────
+    // EV chargers: power (W) + SoC (%)
+    // BESS:        power (W) + SoC (%)
+    // AFE:         power (W)
     const evAssets = [...uniEvAssets, ...biEvAssets];
-    const measurementParams = evAssets.flatMap(a => [
-      `${a.asset_key}_POWER`, `${a.asset_key}_SoC`
-    ]);
+
+    const measurementParams = [
+      ...afeAssets.map(a => `${a.asset_key}_POWER`),
+      ...[...evAssets, ...bessAssets].flatMap(a => [
+        `${a.asset_key}_POWER`,
+        `${a.asset_key}_SoC`
+      ])
+    ];
 
     // ── Query database ────────────────────────────────────────────────────────
     const [inputsResult, outputsResult, measurementsResult] = await Promise.all([
@@ -207,7 +238,6 @@ router.get('/:date', async (req, res) => {
         let key = rounded.toISOString();
 
         if (!buckets[key]) {
-          // Try to find a nearby existing bucket within tolerance
           const nearby = Object.keys(buckets).find(k =>
             Math.abs(new Date(k) - rounded) <= toleranceMs
           );
@@ -222,7 +252,6 @@ router.get('/:date', async (req, res) => {
           buckets[key][param] = row.value;
           buckets[key]._counts[param] = 1;
         } else {
-          // Running average
           const n = ++buckets[key]._counts[param];
           buckets[key][param] = buckets[key][param] + (row.value - buckets[key][param]) / n;
         }
@@ -240,15 +269,57 @@ router.get('/:date', async (req, res) => {
         const item = { ...bucket };
         delete item._counts;
 
+        // Convert AFE raw power readings from W → kW and derive combined setpoint
+        afeAssets.forEach(a => {
+          const powerKey = `${a.asset_key}_POWER`;
+          if (item[powerKey] != null) item[powerKey] = item[powerKey] / 1000;
+
+          // Setpoint: import is positive, export is negative
+          const imp = item[`${a.asset_key}_imp`];
+          const exp = item[`${a.asset_key}_exp`];
+          if (imp != null || exp != null) {
+            item[`${a.asset_key}_setpoint`] = (imp ?? 0) - (exp ?? 0);
+          }
+        });
+
         // Convert EV raw power readings from W → kW
         evAssets.forEach(a => {
           const key = `${a.asset_key}_POWER`;
           if (item[key] != null) item[key] = item[key] / 1000;
         });
 
+        // Convert BESS raw power readings from W → kW
+        bessAssets.forEach(a => {
+          const powerKey = `${a.asset_key}_POWER`;
+          if (item[powerKey] != null) item[powerKey] = item[powerKey] / 1000;
+
+          // Derive combined setpoint: discharge is positive, charge is negative
+          const ch  = item[`${a.asset_key}_charge`];
+          const dis = item[`${a.asset_key}_discharge`];
+          if (ch != null || dis != null) {
+            item[`${a.asset_key}_setpoint`] = (dis ?? 0) - (ch ?? 0);
+          }
+
+          // Convert kWh level setpoint → SoC %  (if capacity is known)
+          const capacity = bessCapacities[a.asset_key];
+          const level    = item[`${a.asset_key}_level`];
+          if (capacity && level != null) {
+            item[`${a.asset_key}_level_soc`] = (level / capacity) * 100;
+          }
+        });
+
+        // Derive combined setpoint for bidirectional EVs as well
+        biEvAssets.forEach(a => {
+          const ch  = item[`${a.asset_key}_charge`];
+          const dis = item[`${a.asset_key}_discharge`];
+          if (ch != null || dis != null) {
+            item[`${a.asset_key}_setpoint`] = (dis ?? 0) - (ch ?? 0);
+          }
+        });
+
         return item;
       })
-      .filter(item => Object.keys(item).length > 2); // exclude empty buckets
+      .filter(item => Object.keys(item).length > 2);
 
     res.json({
       success: true,
@@ -256,7 +327,6 @@ router.get('/:date', async (req, res) => {
       count: data.length,
       interval: intervalMinutes,
       info: `Data grouped into ${intervalMinutes}-minute intervals`,
-      // Asset lists for the frontend to drive chart rendering
       activeAssets,
       afeAssets,
       pvAssets,
@@ -265,7 +335,8 @@ router.get('/:date', async (req, res) => {
       cloadAssets,
       bessAssets,
       uniEvAssets,
-      biEvAssets
+      biEvAssets,
+      bessCapacities   // { asset_key: capacity_kWh | null }
     });
 
   } catch (error) {

@@ -15,14 +15,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
-@File: forecasting_models.py
+@File: forecast_models.py
 @Description: Base forecasting models for different asset types. Supports multiple forecasting approaches: Prophet and simple baseline models.
 
 @Created: 08 February 2026
-@Last Modified: 14 April 2026
+@Last Modified: 22 April 2026
 @Author: LeonGritsyuk-eaton
 
-@Version: v2.0.1
+@Version: v2.0.2
 '''
 
 
@@ -33,6 +33,8 @@ import numpy as np
 import pandas as pd
 import logging
 from dataclasses import dataclass
+import os
+from zoneinfo import ZoneInfo
 
 from utils.logging_utils import setup_logging
 from utils.time_utils import current_time
@@ -174,8 +176,11 @@ class ProphetForecaster(BaseForecaster):
         if not self.is_trained:
             raise ValueError("Model must be trained before prediction")
         
+        local_tz = ZoneInfo('UTC')
+
         # Start forecast from the next rounded hour
-        now = current_time()
+        # current_time() is tz-aware — convert to local then strip, consistent with training data
+        now = current_time().astimezone(local_tz).replace(tzinfo=None)
         if now.minute == 0 and now.second == 0:
             start_time = now
         else:

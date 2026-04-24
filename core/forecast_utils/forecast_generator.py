@@ -19,10 +19,10 @@ limitations under the License.
 @Description: Forecast generator module that orchestrates training and prediction for all assets. Handles data preparation, model training, prediction, and database storage.
 
 @Created: 08 February 2026
-@Last Modified: 05 March 2026
+@Last Modified: 22 April 2026
 @Author: LeonGritsyuk-eaton
 
-@Version: v2.0.1
+@Version: v2.0.2
 '''
 
 
@@ -32,6 +32,8 @@ import pandas as pd
 import numpy as np
 import logging
 import json
+import os
+from zoneinfo import ZoneInfo
 
 from forecast_utils.db_config import get_db
 from forecast_utils.data_validator import DataValidator, MIN_SAMPLES_REQUIREMENTS
@@ -122,7 +124,7 @@ class ForecastGenerator:
         asset_key: str,
         asset_type: str,
         horizon_hours: int = 12,
-        interval_minutes: int = 60,  # Changed default to 60 minutes (hourly)
+        interval_minutes: int = 60,
         training_days: int = 30
     ) -> bool:
         """
@@ -140,7 +142,16 @@ class ForecastGenerator:
         """
         logger.debug(f"Generating forecast for {asset_key} ({asset_type})")
         
-        # Load historical data (will be resampled to hourly)
+        # Validate over the same window we'll actually train on
+        is_ready = self.validator.check_asset_readiness(
+            asset_key,
+            asset_type,
+            window_hours=training_days * 24  # <-- keep the two in sync
+        )
+        if not is_ready and not self.force:
+            logger.warning(f"Asset {asset_key} failed readiness check, skipping")
+            return False
+
         historical_data = self._load_historical_data(asset_key, training_days)
         
         # Get minimum required samples for this asset type
@@ -191,8 +202,8 @@ class ForecastGenerator:
         return True
     
     def _load_historical_data(
-        self, 
-        asset_key: str, 
+        self,
+        asset_key: str,
         days: int = 30,
         resample_interval: str = '1H'
     ) -> Optional[pd.DataFrame]:
@@ -232,6 +243,15 @@ class ForecastGenerator:
         df['timestamp'] = pd.to_datetime(df['timestamp'])
         df['power'] = df['power'].astype(float)
         
+        # Convert to local time then strip tz — Prophet requires tz-naive timestamps,
+        # but we must localise first so hourly patterns reflect actual local solar/load time
+        local_tz = ZoneInfo('UTC')
+        df['timestamp'] = (
+            df['timestamp']
+            .dt.tz_convert(local_tz)   # shift to local wall-clock time
+            .dt.tz_localize(None)      # drop tz info so Prophet accepts it
+        )
+
         # Resample high-frequency data (10-15 sec) to hourly intervals
         # This handles irregular timestamps and missing data
         df = df.set_index('timestamp')

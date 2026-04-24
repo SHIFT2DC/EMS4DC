@@ -22,7 +22,7 @@ limitations under the License.
 @Last Modified: 06 March 2026
 @Author: LeonGritsyuk-eaton
 
-@Version: v2.0.1
+@Version: v2.0.2
 */
 
 import { Outlet, useLocation } from "react-router-dom"

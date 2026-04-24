@@ -22,8 +22,9 @@ limitations under the License.
 @Last Modified: 16 February 2026
 @Author: LeonGritsyuk-eaton
 
-@Version: v2.0.1
+@Version: v2.0.2
 */
+
 
 import { Link, useNavigate } from 'react-router-dom'
 import { useEffect, useRef } from 'react'

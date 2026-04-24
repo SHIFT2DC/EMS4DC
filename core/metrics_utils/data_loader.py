@@ -19,10 +19,10 @@ limitations under the License.
 @Description: Data loader module for fetching measurements from database.
 
 @Created: 11 February 2026
-@Last Modified: 10 February 2026
+@Last Modified: 22 April 2026
 @Author: Leon Gritsyuk
 
-@Version: v2.0.1
+@Version: v2.0.2
 '''
 
 
@@ -30,6 +30,10 @@ import pandas as pd
 from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Tuple
 from metrics_utils.database import DatabaseConnection
+import logging
+from utils.logging_utils import setup_logging
+setup_logging()
+logger = logging.getLogger('data-loader')
 
 
 class MeasurementLoader:
@@ -146,7 +150,7 @@ class MeasurementLoader:
         
         # Filter for the specific parameter
         param_df = df[df['parameter'].str.endswith(f'_{parameter_suffix}')].copy()
-        
+
         if param_df.empty:
             return pd.DataFrame()
         

@@ -19,29 +19,30 @@ limitations under the License.
 @Description: # TODO: Add desc
 
 @Created: 1st January 2025
-@Last Modified: 23 February 2026
+@Last Modified: 24 April 2026
 @Author: LeonGritsyuk-eaton
 
-@Version: v2.0.1
+@Version: v2.0.2
 */
 
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-  Legend, ResponsiveContainer, BarChart, Bar
+  Legend, ResponsiveContainer,
+  ReferenceArea, ReferenceLine
 } from 'recharts';
 import {
   RefreshCw, Activity, Zap, Battery, Wind,
   AlertTriangle, CalendarIcon, ChevronLeft, ChevronRight, Sun
 } from 'lucide-react';
-import { Skeleton }                             from '@/components/ui/skeleton';
-import { Calendar }                             from '@/components/ui/calendar';
+import { Skeleton }                               from '@/components/ui/skeleton';
+import { Calendar }                               from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Button }                               from '@/components/ui/button';
-import { format }                               from 'date-fns';
-import { cn }                                   from '@/lib/utils';
-import api                                       from '@/lib/axios';
+import { Button }                                  from '@/components/ui/button';
+import { format }                                  from 'date-fns';
+import { cn }                                      from '@/lib/utils';
+import api                                          from '@/lib/axios';
 
 // ── Palette helpers ──────────────────────────────────────────────────────────
 const DEVICE_COLORS = [
@@ -100,29 +101,108 @@ const SimpleLineChart = ({ data, lines, yLabel = 'Power (kW)' }) => (
   </ResponsiveContainer>
 );
 
+// ── Power chart with charge/discharge zone background ────────────────────────
+const PowerChartWithZones = ({
+  data,
+  lines,
+  yLabel = 'Power (kW)',
+  // Zone labels and colors — override for non-BESS/EV assets
+  positiveLabel    = 'Discharge ↑',
+  negativeLabel    = 'Charge ↓',
+  positiveFill     = '#bbf7d0',   // green tint  – discharge / export
+  negativeFill     = '#bfdbfe',   // blue tint   – charge / import
+  positiveLabelColor = '#15803d',
+  negativeLabelColor = '#1d4ed8',
+}) => {
+  const { yMin, yMax } = useMemo(() => {
+    let lo = 0, hi = 0;
+    data.forEach(d =>
+      lines.forEach(l => {
+        const v = d[l.key];
+        if (v != null) { lo = Math.min(lo, v); hi = Math.max(hi, v); }
+      })
+    );
+    const pad = Math.max((hi - lo) * 0.08, 0.5);
+    return { yMin: lo - pad, yMax: hi + pad };
+  }, [data, lines]);
+
+  return (
+    <ResponsiveContainer width="100%" height={300}>
+      <LineChart data={data}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="time" />
+        <YAxis
+          domain={[yMin, yMax]}
+          tickFormatter={(v) => +v.toFixed(2)}
+          label={{ value: yLabel, angle: -90, position: 'insideLeft' }}
+        />
+        <Tooltip content={<CustomTooltip />} />
+        <Legend />
+
+        {/* Positive zone */}
+        {yMax > 0 && (
+          <ReferenceArea
+            y1={0} y2={yMax}
+            fill={positiveFill}
+            fillOpacity={0.35}
+            ifOverflow="hidden"
+            label={{ value: positiveLabel, position: 'insideTopLeft', fontSize: 11, fill: positiveLabelColor }}
+          />
+        )}
+        {/* Negative zone */}
+        {yMin < 0 && (
+          <ReferenceArea
+            y1={yMin} y2={0}
+            fill={negativeFill}
+            fillOpacity={0.35}
+            ifOverflow="hidden"
+            label={{ value: negativeLabel, position: 'insideBottomLeft', fontSize: 11, fill: negativeLabelColor }}
+          />
+        )}
+
+        <ReferenceLine y={0} stroke="#6b7280" strokeWidth={1.5} />
+
+        {lines.map(({ key, name, color, dashed }) => (
+          <Line
+            key={key}
+            type="monotone"
+            dataKey={key}
+            stroke={color}
+            strokeWidth={2}
+            name={name}
+            dot={{ r: 3 }}
+            strokeDasharray={dashed ? '5 5' : undefined}
+          />
+        ))}
+      </LineChart>
+    </ResponsiveContainer>
+  );
+};
+
 // ── Main dashboard ────────────────────────────────────────────────────────────
 const EMSDashboard = () => {
-  const [data,           setData]           = useState([]);
-  const [selectedDate,   setSelectedDate]   = useState(new Date());
+  const [data,             setData]             = useState([]);
+  const [selectedDate,     setSelectedDate]     = useState(new Date());
   const [selectedInterval, setSelectedInterval] = useState('15');
-  const [loading,        setLoading]        = useState(false);
-  const [error,          setError]          = useState(null);
-  const [dataInfo,       setDataInfo]       = useState('');
+  const [loading,          setLoading]          = useState(false);
+  const [error,            setError]            = useState(null);
+  const [dataInfo,         setDataInfo]         = useState('');
 
   // Per-type asset lists (populated from API response)
-  const [afeAssets,   setAfeAssets]   = useState([]);
-  const [pvAssets,    setPvAssets]    = useState([]);
-  const [windAssets,  setWindAssets]  = useState([]);
-  const [loadAssets,  setLoadAssets]  = useState([]);
-  const [cloadAssets, setCloadAssets] = useState([]);
-  const [bessAssets,  setBessAssets]  = useState([]);
-  const [uniEvAssets, setUniEvAssets] = useState([]);
-  const [biEvAssets,  setBiEvAssets]  = useState([]);
+  const [afeAssets,      setAfeAssets]      = useState([]);
+  const [pvAssets,       setPvAssets]       = useState([]);
+  const [windAssets,     setWindAssets]     = useState([]);
+  const [loadAssets,     setLoadAssets]     = useState([]);
+  const [cloadAssets,    setCloadAssets]    = useState([]);
+  const [bessAssets,     setBessAssets]     = useState([]);
+  const [uniEvAssets,    setUniEvAssets]    = useState([]);
+  const [biEvAssets,     setBiEvAssets]     = useState([]);
+  const [bessCapacities, setBessCapacities] = useState({});
 
   // ── Data fetching ─────────────────────────────────────────────────────────
   const formatDateForAPI = (d) => {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const y   = d.getFullYear();
+    const m   = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
     return `${y}-${m}-${day}`;
   };
@@ -144,14 +224,15 @@ const EMSDashboard = () => {
         })));
         setDataInfo(result.info || '');
 
-        if (result.afeAssets)   setAfeAssets(result.afeAssets);
-        if (result.pvAssets)    setPvAssets(result.pvAssets);
-        if (result.windAssets)  setWindAssets(result.windAssets);
-        if (result.loadAssets)  setLoadAssets(result.loadAssets);
-        if (result.cloadAssets) setCloadAssets(result.cloadAssets);
-        if (result.bessAssets)  setBessAssets(result.bessAssets);
-        if (result.uniEvAssets) setUniEvAssets(result.uniEvAssets);
-        if (result.biEvAssets)  setBiEvAssets(result.biEvAssets);
+        if (result.afeAssets)      setAfeAssets(result.afeAssets);
+        if (result.pvAssets)       setPvAssets(result.pvAssets);
+        if (result.windAssets)     setWindAssets(result.windAssets);
+        if (result.loadAssets)     setLoadAssets(result.loadAssets);
+        if (result.cloadAssets)    setCloadAssets(result.cloadAssets);
+        if (result.bessAssets)     setBessAssets(result.bessAssets);
+        if (result.uniEvAssets)    setUniEvAssets(result.uniEvAssets);
+        if (result.biEvAssets)     setBiEvAssets(result.biEvAssets);
+        if (result.bessCapacities) setBessCapacities(result.bessCapacities);
       } else {
         setError('Failed to fetch data');
       }
@@ -193,7 +274,7 @@ const EMSDashboard = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <Activity className="text-blue-600" size={32} />
-              <h1 className="text-3xl font-bold text-gray-800">EMS Dashboard</h1>
+              <h1 className="text-3xl font-bold text-gray-800">Optimization Dashboard</h1>
             </div>
 
             <div className="flex items-center space-x-4">
@@ -280,17 +361,8 @@ const EMSDashboard = () => {
                   data={data}
                   yLabel="Power (kW)"
                   lines={[
-                    {
-                      key: `${asset.asset_key}_power_fct`,
-                      name: 'Measured Average',
-                      color: deviceColor(idx * 2),
-                    },
-                    {
-                      key: `${asset.asset_key}_power`,
-                      name: 'Optimal',
-                      color: deviceColor(idx * 2 + 1),
-                      dashed: true,
-                    },
+                    { key: `${asset.asset_key}_power_fct`, name: 'Measured Average', color: deviceColor(idx * 2) },
+                    { key: `${asset.asset_key}_power`,     name: 'Optimal',          color: deviceColor(idx * 2 + 1), dashed: true },
                   ]}
                 />
               </div>
@@ -309,17 +381,8 @@ const EMSDashboard = () => {
                   data={data}
                   yLabel="Power (kW)"
                   lines={[
-                    {
-                      key: `${asset.asset_key}_power_fct`,
-                      name: 'Measured Average',
-                      color: deviceColor(idx * 2),
-                    },
-                    {
-                      key: `${asset.asset_key}_power`,
-                      name: 'Optimal',
-                      color: deviceColor(idx * 2 + 1),
-                      dashed: true,
-                    },
+                    { key: `${asset.asset_key}_power_fct`, name: 'Measured Average', color: deviceColor(idx * 2) },
+                    { key: `${asset.asset_key}_power`,     name: 'Optimal',          color: deviceColor(idx * 2 + 1), dashed: true },
                   ]}
                 />
               </div>
@@ -335,17 +398,8 @@ const EMSDashboard = () => {
                   data={data}
                   yLabel="Power (kW)"
                   lines={[
-                    {
-                      key: `${asset.asset_key}_power_fct`,
-                      name: 'Measured Average',
-                      color: deviceColor(idx * 2),
-                    },
-                    {
-                      key: `${asset.asset_key}_power`,
-                      name: 'Optimal',
-                      color: deviceColor(idx * 2 + 1),
-                      dashed: true,
-                    },
+                    { key: `${asset.asset_key}_power_fct`, name: 'Measured Average', color: deviceColor(idx * 2) },
+                    { key: `${asset.asset_key}_power`,     name: 'Optimal',          color: deviceColor(idx * 2 + 1), dashed: true },
                   ]}
                 />
               </div>
@@ -364,98 +418,130 @@ const EMSDashboard = () => {
                   data={data}
                   yLabel="Power (kW)"
                   lines={[
-                    {
-                      key: `${asset.asset_key}_power_fct`,
-                      name: 'Measured Average',
-                      color: deviceColor(idx * 2),
-                    },
-                    {
-                      key: `${asset.asset_key}_power`,
-                      name: 'Optimal',
-                      color: deviceColor(idx * 2 + 1),
-                      dashed: true,
-                    },
+                    { key: `${asset.asset_key}_power_fct`, name: 'Measured Average', color: deviceColor(idx * 2) },
+                    { key: `${asset.asset_key}_power`,     name: 'Optimal',          color: deviceColor(idx * 2 + 1), dashed: true },
                   ]}
                 />
               </div>
             ))}
 
             {/* ── Per-BESS charts ──────────────────────────────────────────── */}
-            {bessAssets.map((asset) => (
-              <div key={asset.asset_key} className="bg-white rounded-lg shadow-md p-6">
-                <div className="flex items-center space-x-2 mb-4">
-                  <Battery className="text-blue-600" size={24} />
-                  <h2 className="text-xl font-semibold text-gray-800">
-                    {asset.name}: Charge / Discharge &amp; Energy Level
-                  </h2>
-                </div>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={data}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="time" />
-                    <YAxis
-                      yAxisId="left"
-                      label={{ value: 'Energy (kWh)', angle: -90, position: 'insideLeft' }}
+            {bessAssets.map((asset) => {
+              const hasCapacity = bessCapacities[asset.asset_key] != null;
+              return (
+                <React.Fragment key={asset.asset_key}>
+                  {/* Power chart */}
+                  <div className="bg-white rounded-lg shadow-md p-6">
+                    <div className="flex items-center space-x-2 mb-1">
+                      <Battery className="text-blue-600" size={24} />
+                      <h2 className="text-xl font-semibold text-gray-800">
+                        {asset.name}: Power — Measured vs Setpoint
+                      </h2>
+                    </div>
+                    <p className="text-xs text-gray-400 mb-4 ml-8">
+                      Positive = discharging &nbsp;·&nbsp; Negative = charging
+                    </p>
+                    <PowerChartWithZones
+                      data={data}
+                      yLabel="Power (kW)"
+                      lines={[
+                        { key: `${asset.asset_key}_POWER`,    name: 'Measured Power',    color: '#1d4ed8' },
+                        { key: `${asset.asset_key}_setpoint`, name: 'Target Power', color: '#dc2626', dashed: true },
+                      ]}
                     />
-                    <YAxis
-                      yAxisId="right"
-                      orientation="right"
-                      label={{ value: 'Power (kW)', angle: 90, position: 'insideRight' }}
+                  </div>
+
+                  {/* SoC chart */}
+                  <div className="bg-white rounded-lg shadow-md p-6">
+                    <div className="flex items-center space-x-2 mb-4">
+                      <Battery className="text-green-600" size={24} />
+                      <h2 className="text-xl font-semibold text-gray-800">
+                        {asset.name}: State of Charge — Measured vs Setpoint
+                        {!hasCapacity && (
+                          <span className="ml-2 text-sm font-normal text-amber-600">
+                            (capacity not found in config – setpoint in kWh)
+                          </span>
+                        )}
+                      </h2>
+                    </div>
+                    <SimpleLineChart
+                      data={data}
+                      yLabel={hasCapacity ? 'SoC (%)' : 'SoC / Level'}
+                      lines={[
+                        {
+                          key:   `${asset.asset_key}_SoC`,
+                          name:  'Measured SoC (%)',
+                          color: '#059669',
+                        },
+                        {
+                          key:   hasCapacity
+                            ? `${asset.asset_key}_level_soc`
+                            : `${asset.asset_key}_level`,
+                          name:  hasCapacity ? 'Setpoint SoC (%)' : 'Setpoint Level (kWh)',
+                          color: '#0891b2',
+                          dashed: true,
+                        },
+                      ]}
                     />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Legend />
-                    <Line yAxisId="left"  type="monotone" dataKey={`${asset.asset_key}_level`}
-                          stroke="#3b82f6" strokeWidth={3} name="Battery Level (kWh)" dot={{ r: 4 }} />
-                    <Line yAxisId="right" type="monotone" dataKey={`${asset.asset_key}_charge`}
-                          stroke="#22c55e" strokeWidth={2} name="Charge (kW)" dot={{ r: 3 }} />
-                    <Line yAxisId="right" type="monotone" dataKey={`${asset.asset_key}_discharge`}
-                          stroke="#f59e0b" strokeWidth={2} name="Discharge (kW)" dot={{ r: 3 }} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            ))}
+                  </div>
+                </React.Fragment>
+              );
+            })}
 
             {/* ── Per-AFE grid flow charts ─────────────────────────────────── */}
             {afeAssets.map((asset) => (
               <div key={asset.asset_key} className="bg-white rounded-lg shadow-md p-6">
-                <h2 className="text-xl font-semibold text-gray-800 mb-4">
-                  {asset.name}: Grid Power Flow Analysis
-                </h2>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={data}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="time" />
-                    <YAxis label={{ value: 'Power (kW)', angle: -90, position: 'insideLeft' }} />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Legend />
-                    <Bar dataKey={`${asset.asset_key}_imp`}  fill="#dc2626" name="Import (kW)" />
-                    <Bar dataKey={`${asset.asset_key}_exp`}  fill="#16a34a" name="Export Total (kW)" />
-                    <Bar dataKey={`${asset.asset_key}_exp1`} fill="#2563eb" name="Export Non-Service (kW)" />
-                    <Bar dataKey={`${asset.asset_key}_exp2`} fill="#ca8a04" name="Grid Service Export (kW)" />
-                  </BarChart>
-                </ResponsiveContainer>
+                <div className="flex items-center space-x-2 mb-1">
+                  <Zap className="text-orange-500" size={24} />
+                  <h2 className="text-xl font-semibold text-gray-800">
+                    {asset.name}: Grid Power — Measured vs Setpoint
+                  </h2>
+                </div>
+                <p className="text-xs text-gray-400 mb-4 ml-8">
+                  Positive = importing&nbsp;·&nbsp;Negative = exporting
+                </p>
+                <PowerChartWithZones
+                  data={data}
+                  yLabel="Power (kW)"
+                  positiveLabel="Import ↑"
+                  negativeLabel="Export ↓"
+                  positiveFill="#fee2e2"
+                  negativeFill="#bbf7d0"
+                  positiveLabelColor="#b91c1c"
+                  negativeLabelColor="#15803d"
+                  lines={[
+                    { key: `${asset.asset_key}_POWER`,    name: 'Measured Power',      color: '#dc2626' },
+                    { key: `${asset.asset_key}_setpoint`, name: 'Target Power', color: '#6b7280', dashed: true },
+                  ]}
+                />
               </div>
             ))}
 
-            {/* Aggregate grid totals (shown when >1 AFE or always for context) */}
             {afeAssets.length > 1 && (
               <div className="bg-white rounded-lg shadow-md p-6">
-                <h2 className="text-xl font-semibold text-gray-800 mb-4">
-                  Aggregate Grid Power Flow (All AFEs)
-                </h2>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={data}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="time" />
-                    <YAxis label={{ value: 'Power (kW)', angle: -90, position: 'insideLeft' }} />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Legend />
-                    <Bar dataKey="imp"  fill="#dc2626" name="Total Import (kW)" />
-                    <Bar dataKey="exp"  fill="#16a34a" name="Total Export (kW)" />
-                    <Bar dataKey="exp1" fill="#2563eb" name="Total Export Non-Service (kW)" />
-                    <Bar dataKey="exp2" fill="#ca8a04" name="Total Grid Service Export (kW)" />
-                  </BarChart>
-                </ResponsiveContainer>
+                <div className="flex items-center space-x-2 mb-1">
+                  <Zap className="text-orange-500" size={24} />
+                  <h2 className="text-xl font-semibold text-gray-800">
+                    Aggregate Grid Power — All AFEs
+                  </h2>
+                </div>
+                <p className="text-xs text-gray-400 mb-4 ml-8">
+                  Positive = importing&nbsp;·&nbsp;Negative = exporting
+                </p>
+                <PowerChartWithZones
+                  data={data}
+                  yLabel="Power (kW)"
+                  positiveLabel="Import ↑"
+                  negativeLabel="Export ↓"
+                  positiveFill="#fee2e2"
+                  negativeFill="#bbf7d0"
+                  positiveLabelColor="#b91c1c"
+                  negativeLabelColor="#15803d"
+                  lines={[
+                    { key: 'imp', name: 'Total Import Target (kW)', color: '#dc2626', dashed: true },
+                    { key: 'exp', name: 'Total Export Target (kW)', color: '#16a34a', dashed: true },
+                  ]}
+                />
               </div>
             )}
 
@@ -473,8 +559,8 @@ const EMSDashboard = () => {
                     data={data}
                     yLabel="Power (kW)"
                     lines={[
-                      { key: `${asset.asset_key}_POWER`,  name: 'Measured Power', color: '#9333ea' },
-                      { key: `${asset.asset_key}_charge`, name: 'Setpoint Power', color: '#f97316', dashed: true },
+                      { key: `${asset.asset_key}_POWER`,  name: 'Measured Power',  color: '#9333ea' },
+                      { key: `${asset.asset_key}_charge`, name: 'Target Power',  color: '#f97316', dashed: true },
                     ]}
                   />
                 </div>
@@ -489,8 +575,8 @@ const EMSDashboard = () => {
                     data={data}
                     yLabel="State of Charge (%)"
                     lines={[
-                      { key: `${asset.asset_key}_SoC`, name: 'Measured SoC', color: '#059669' },
-                      { key: `${asset.asset_key}_soc`, name: 'Setpoint SoC', color: '#0891b2', dashed: true },
+                      { key: `${asset.asset_key}_SoC`, name: 'Measured SoC',   color: '#059669' },
+                      { key: `${asset.asset_key}_soc`, name: 'Target SoC',   color: '#0891b2', dashed: true },
                     ]}
                   />
                 </div>
@@ -500,23 +586,28 @@ const EMSDashboard = () => {
             {/* ── Per-Bidirectional-EV charts ──────────────────────────────── */}
             {biEvAssets.map((asset) => (
               <React.Fragment key={asset.asset_key}>
+                {/* Power chart with zone shading */}
                 <div className="bg-white rounded-lg shadow-md p-6">
-                  <div className="flex items-center space-x-2 mb-4">
+                  <div className="flex items-center space-x-2 mb-1">
                     <Zap className="text-blue-600" size={24} />
                     <h2 className="text-xl font-semibold text-gray-800">
-                      {asset.name} (Bidirectional): Measured Power vs Setpoints
+                      {asset.name} (Bidirectional): Power — Measured vs Setpoint
                     </h2>
                   </div>
-                  <SimpleLineChart
+                  <p className="text-xs text-gray-400 mb-4 ml-8">
+                    Positive = discharging &nbsp;·&nbsp; Negative = charging
+                  </p>
+                  <PowerChartWithZones
                     data={data}
                     yLabel="Power (kW)"
                     lines={[
-                      { key: `${asset.asset_key}_POWER`,     name: 'Measured Power',          color: '#1d4ed8' },
-                      { key: `${asset.asset_key}_charge`,    name: 'Setpoint Charge Power',   color: '#dc2626', dashed: true },
-                      { key: `${asset.asset_key}_discharge`, name: 'Setpoint Discharge Power', color: '#ea580c', dashed: true },
+                      { key: `${asset.asset_key}_POWER`,    name: 'Measured Power',      color: '#1d4ed8' },
+                      { key: `${asset.asset_key}_setpoint`, name: 'Target Power',  color: '#dc2626', dashed: true },
                     ]}
                   />
                 </div>
+
+                {/* SoC chart */}
                 <div className="bg-white rounded-lg shadow-md p-6">
                   <div className="flex items-center space-x-2 mb-4">
                     <Battery className="text-indigo-600" size={24} />
@@ -528,8 +619,8 @@ const EMSDashboard = () => {
                     data={data}
                     yLabel="State of Charge (%)"
                     lines={[
-                      { key: `${asset.asset_key}_SoC`, name: 'Measured SoC', color: '#7c3aed' },
-                      { key: `${asset.asset_key}_soc`, name: 'Setpoint SoC', color: '#0f766e', dashed: true },
+                      { key: `${asset.asset_key}_SoC`, name: 'Measured SoC',  color: '#7c3aed' },
+                      { key: `${asset.asset_key}_soc`, name: 'Target SoC',  color: '#0f766e', dashed: true },
                     ]}
                   />
                 </div>

@@ -19,10 +19,10 @@ limitations under the License.
 @Description: Multi-objective optimizer utilities with asset validation
 
 @Created: 3rd February 2026
-@Last Modified: 16 February 2026
+@Last Modified: 22 April 2026
 @Author: LeonGritsyuk-eaton
 
-@Version: v2.0.1
+@Version: v2.0.2
 '''
 
 
@@ -187,8 +187,8 @@ class LegacyOptimizerRunner:
         bess_level_kWh = recent_data["bess1_SoC"] / 100 * self.bess_capacity_kWh
         unidir_car_capacity_kWh = recent_data["uniev1_CAR_CAP"] / 1000
         bidir_car_capacity_kWh = recent_data["biev1_CAR_CAP"] / 1000
-        unidir_car_power_max_kW = recent_data["uniev1_CAR_MAX_POWER"] / 1000
-        bidir_car_power_max_kW = recent_data["biev1_CAR_MAX_POWER"] / 1000
+        unidir_car_power_max_kW = recent_data["uniev1_CAR_MAX_P"] / 1000
+        bidir_car_power_max_kW = recent_data["biev1_CAR_MAX_P"] / 1000
         bidir_car_arrival_soc = recent_data["biev1_CAR_ARRIVAL"] / 100
         bidir_car_is_dischargable = recent_data["biev1_CAR_AVBL"]
 

@@ -19,10 +19,10 @@ limitations under the License.
 @Description: Data validation module to assess forecast readiness for each asset. Checks if sufficient historical data exists before allowing forecast generation.
 
 @Created: 08 February 2026
-@Last Modified: 05 March 2026
+@Last Modified: 22 April 2026
 @Author: LeonGritsyuk-eaton
 
-@Version: v2.0.1
+@Version: v2.0.2
 '''
 
 
@@ -92,7 +92,12 @@ class DataValidator:
         
         return readiness
     
-    def check_asset_readiness(self, asset_key: str, asset_type: str) -> bool:
+    def check_asset_readiness(
+        self, 
+        asset_key: str, 
+        asset_type: str,
+        window_hours: int = 720  # default 30 days, matches training_days
+    ) -> bool:
         """
         Check if a specific asset has sufficient data for forecasting.
         
@@ -107,7 +112,7 @@ class DataValidator:
         min_samples = self.min_samples_requirements.get(asset_type, 672)
         
         # Get data statistics
-        stats = self._get_data_statistics(asset_key)
+        stats = self._get_data_statistics(asset_key, window_hours=window_hours)
         
         if stats is None:
             logger.warning(f"No data found for asset {asset_key}")
@@ -149,27 +154,49 @@ class DataValidator:
         )
         
         if not is_ready:
+            # logger.debug(
+            #     f"Asset {asset_key} not ready: "
+            #     f"{total_samples_hourly:.1f}/{min_samples} samples, "
+            #     f"{coverage_pct:.1f}% coverage"
+            # )
+
             logger.debug(
                 f"Asset {asset_key} not ready: "
-                f"{total_samples_hourly:.1f}/{min_samples} samples, "
-                f"{coverage_pct:.1f}% coverage"
+                f"{total_samples_hourly} >= {min_samples} ?? samples, "
+                f"{coverage_pct:.1f}% coverage >= {self.min_coverage_pct}%??"
             )
         
         return is_ready
     
-    def _get_data_statistics(self, asset_key: str) -> Dict:
+    def _get_data_statistics(self, asset_key: str, window_hours: int) -> Dict:  # <-- new param
         """
-        Get statistical information about available data for an asset.
-        
+        Get statistical information about available data for an asset,
+        scoped to the most recent window matching the forecast requirement.
+
         Args:
             asset_key: Unique identifier for the asset
-            
+            window_hours: How many hours back from the latest measurement to inspect
+                
         Returns:
             Dictionary with data statistics or None if no data
         """
         power_param = f"{asset_key}_POWER"
         
         with self.db.get_cursor() as cursor:
+            # Anchor the window to the most recent measurement, not the oldest
+            cursor.execute("""
+                SELECT MAX(time) as last_measurement
+                FROM measurements
+                WHERE parameter = %s AND quality = 'ok'
+            """, (power_param,))
+            anchor = cursor.fetchone()
+
+            if not anchor or not anchor['last_measurement']:
+                return None
+
+            last_measurement = anchor['last_measurement']
+            window_start = last_measurement - timedelta(hours=window_hours)  # <-- rolling window
+
             cursor.execute("""
                 SELECT 
                     COUNT(*) as total_samples,
@@ -179,7 +206,8 @@ class DataValidator:
                     STDDEV(value) as std_power
                 FROM measurements
                 WHERE parameter = %s AND quality = 'ok'
-            """, (power_param,))
+                    AND time >= %s AND time <= %s  -- scoped to window
+            """, (power_param, window_start, last_measurement))
             
             result = cursor.fetchone()
             

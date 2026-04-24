@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS model_metadata (
     asset_key VARCHAR(50) NOT NULL,
     model_version VARCHAR(50) NOT NULL,
     training_start_date TIMESTAMPTZ NOT NULL,
-    training_end_date TIMETIMESTAMPTZSTAMP NOT NULL,
+    training_end_date TIMESTAMPTZ NOT NULL,
     samples_count INTEGER NOT NULL,
     model_type VARCHAR(50) NOT NULL,
     model_params JSONB,

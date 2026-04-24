@@ -19,10 +19,10 @@ limitations under the License.
 @Description: # TODO: Add desc
 
 @Created: 1st February 2026
-@Last Modified: 01 April 2026
+@Last Modified: 22 April 2026
 @Author: LeonGritsyuk-eaton
 
-@Version: v2.0.1
+@Version: v2.0.2
 */
 
 
@@ -219,7 +219,7 @@ const ASSET_CONFIG_TEMPLATES = {
         mode: "read"
       },
       {
-        name: "CAR_MAX_POWER",
+        name: "CAR_MAX_P",
         registerType: "holding",
         address: 7,
         modbusId: 1,
@@ -287,7 +287,7 @@ const ASSET_CONFIG_TEMPLATES = {
         mode: "read"
       },
       {
-        name: "CAR_MAX_POWER",
+        name: "CAR_MAX_P",
         registerType: "holding",
         address: 7,
         modbusId: 1,

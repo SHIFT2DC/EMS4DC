@@ -19,10 +19,10 @@ limitations under the License.
 @Description: Base class for all optimization objectives with multi-asset support
 
 @Created: 6th February 2026
-@Last Modified: 01 March 2026
+@Last Modified: 22 April 2026
 @Author: LeonGritsyuk-eaton
 
-@Version: v2.0.1
+@Version: v2.0.2
 '''
 
 
@@ -166,7 +166,7 @@ class BaseOptimizer(ABC):
             inputs['unidir'][charger_id] = {
                 'soc_init': recent_data.get(f"{charger_id}_SoC", 0) / 100,
                 'car_capacity_kWh': recent_data.get(f"{charger_id}_CAR_CAP", 0) / 1000,
-                'car_power_max_kW': recent_data.get(f"{charger_id}_CAR_MAX_POWER", 0) / 1000,
+                'car_power_max_kW': recent_data.get(f"{charger_id}_CAR_MAX_P", 0) / 1000,
                 'efficiency': config['efficiency'],
                 'charger_power_max_kW': config['power_max_kW']
             }
@@ -177,7 +177,7 @@ class BaseOptimizer(ABC):
             inputs['bidir'][charger_id] = {
                 'soc_init': recent_data.get(f"{charger_id}_SoC", 0) / 100,
                 'car_capacity_kWh': recent_data.get(f"{charger_id}_CAR_CAP", 0) / 1000,
-                'car_power_max_kW': recent_data.get(f"{charger_id}_CAR_MAX_POWER", 0) / 1000,
+                'car_power_max_kW': recent_data.get(f"{charger_id}_CAR_MAX_P", 0) / 1000,
                 'arrival_soc': recent_data.get(f"{charger_id}_CAR_ARRIVAL", 0) / 100,
                 'target_soc': config['target_soc'],
                 'is_available': recent_data.get(f"{charger_id}_CAR_AVBL", 0),

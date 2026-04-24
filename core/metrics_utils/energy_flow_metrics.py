@@ -19,10 +19,10 @@ limitations under the License.
 @Description: Energy flow and totals metrics calculator. Handles grid, renewable generation, loads, EVs, and BESS energy flows.
 
 @Created: 11 February 2026
-@Last Modified: 05 March 2026
+@Last Modified: 22 April 2026
 @Author: Leon Gritsyuk
 
-@Version: v2.0.1
+@Version: v2.0.2
 '''
 
 
@@ -33,7 +33,11 @@ from typing import Dict, List, Optional, Tuple
 from metrics_utils.data_loader import MeasurementLoader
 from metrics_utils.config_loader import ConfigLoader
 from utils.time_utils import current_time
+from utils.logging_utils import setup_logging
+import logging
 
+setup_logging()
+logger = logging.getLogger('energy-flow-calc')
 
 class EnergyFlowMetrics:
     """Calculate energy flow and totals metrics."""
@@ -229,18 +233,24 @@ class EnergyFlowMetrics:
             'peak_charging_w': 0.0,
             'peak_discharging_w': 0.0
         }
-        
-        # Unidirectional EVs (only charge)
+
+        # Unidirectional EVs
         if uni_ev_assets:
             uni_power_df = self.data_loader.get_parameter_by_asset(
                 start_time, end_time, 'POWER', uni_ev_assets
             )
+            logger.debug(f"start: [{start_time}] | end: [{end_time}] | assets: [{uni_ev_assets}]")
+            logger.debug(f"uni_power_df: {uni_power_df}")
             if not uni_power_df.empty:
                 uni_total = uni_power_df.sum(axis=1)
-                charging = uni_total[uni_total > 0]
-                if not charging.empty:
-                    metrics['uni_ev_charging_wh'] = float(self._integrate_power_series(charging).sum())
-                    metrics['peak_charging_w'] = max(metrics['peak_charging_w'], float(charging.max()))
+                # Integrate FIRST on the full series, then separate charging increments
+                energy_increments = self._integrate_power_series(uni_total)
+                charging_wh = energy_increments[energy_increments < 0].abs().sum()
+                metrics['uni_ev_charging_wh'] = float(charging_wh)
+                metrics['peak_charging_w'] = max(
+                    metrics['peak_charging_w'],
+                    float(uni_total[uni_total < 0].abs().max()) if (uni_total < 0).any() else 0.0
+                )
         
         # Bidirectional EVs (charge and discharge)
         if bi_ev_assets:
@@ -249,16 +259,17 @@ class EnergyFlowMetrics:
             )
             if not bi_power_df.empty:
                 bi_total = bi_power_df.sum(axis=1)
-                charging = bi_total[bi_total > 0]
-                discharging = bi_total[bi_total < 0].abs()
-                
-                if not charging.empty:
-                    metrics['bi_ev_charging_wh'] = float(self._integrate_power_series(charging).sum())
-                    metrics['peak_charging_w'] = max(metrics['peak_charging_w'], float(charging.max()))
-                
-                if not discharging.empty:
-                    metrics['bi_ev_discharging_wh'] = float(self._integrate_power_series(discharging).sum())
-                    metrics['peak_discharging_w'] = float(discharging.max())
+                energy_increments = self._integrate_power_series(bi_total)
+                charging_wh    = energy_increments[energy_increments < 0].abs().sum()
+                discharging_wh = energy_increments[energy_increments > 0].sum()
+                metrics['bi_ev_charging_wh']    = float(charging_wh)
+                metrics['bi_ev_discharging_wh'] = float(discharging_wh)
+                metrics['peak_charging_w'] = max(
+                    metrics['peak_charging_w'],
+                    float(bi_total[bi_total < 0].abs().max()) if (bi_total < 0).any() else 0.0
+                )
+                if discharging_wh > 0:
+                    metrics['peak_discharging_w'] = float(bi_total[bi_total > 0].max())
         
         metrics['total_charging_wh'] = metrics['uni_ev_charging_wh'] + metrics['bi_ev_charging_wh']
         metrics['total_discharging_wh'] = metrics['bi_ev_discharging_wh']
@@ -293,18 +304,20 @@ class EnergyFlowMetrics:
         
         if not power_df.empty:
             total_power = power_df.sum(axis=1)
+        
+            # Integrate full series first, then split increments
+            energy_increments = self._integrate_power_series(total_power)
             
-            # Positive = charging, Negative = discharging
-            charging = total_power[total_power > 0]
-            discharging = total_power[total_power < 0].abs()
+            # convention: positive = discharging (into grid), negative = charging
+            charging_wh   = energy_increments[energy_increments < 0].abs().sum()
+            discharging_wh = energy_increments[energy_increments > 0].sum()
             
-            if not charging.empty:
-                metrics['total_charging_wh'] = float(self._integrate_power_series(charging).sum())
-                metrics['peak_charging_w'] = float(charging.max())
-            
-            if not discharging.empty:
-                metrics['total_discharging_wh'] = float(self._integrate_power_series(discharging).sum())
-                metrics['peak_discharging_w'] = float(discharging.max())
+            metrics['total_charging_wh']    = float(charging_wh)
+            metrics['total_discharging_wh'] = float(discharging_wh)
+            metrics['peak_charging_w']      = float(total_power[total_power < 0].abs().max()) \
+                                            if (total_power < 0).any() else 0.0
+            metrics['peak_discharging_w']   = float(total_power[total_power > 0].max()) \
+                                            if (total_power > 0).any() else 0.0
         
         # Get SoC measurements
         soc_df = self.data_loader.get_parameter_by_asset(
