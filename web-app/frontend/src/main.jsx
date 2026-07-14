@@ -22,7 +22,7 @@ limitations under the License.
 @Last Modified: 01 March 2026
 @Author: Leon Gritsyuk
 
-@Version: v2.0.2
+@Version: v2.0.3
 */
 
 import { StrictMode } from 'react'

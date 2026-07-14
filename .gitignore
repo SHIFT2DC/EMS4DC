@@ -33,6 +33,5 @@ core/optimization/test_multi_device.py
 *.sln
 *.sw?
 
-web-app/frontend/src/components/ui
 npmjs.org.pem
 /db/init_dev.sql

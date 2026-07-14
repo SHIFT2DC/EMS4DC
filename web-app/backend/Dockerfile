@@ -2,6 +2,8 @@ FROM node:25-alpine
 
 WORKDIR /app
 
+RUN apk add --no-cache docker-cli
+
 ARG HTTP_PROXY
 ARG HTTPS_PROXY
 

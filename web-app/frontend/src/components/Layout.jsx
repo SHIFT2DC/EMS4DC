@@ -19,10 +19,10 @@ limitations under the License.
 @Description: # TODO: Add desc
 
 @Created: 1st January 2025
-@Last Modified: 06 March 2026
+@Last Modified: 14 July 2026
 @Author: LeonGritsyuk-eaton
 
-@Version: v2.0.2
+@Version: v2.0.3
 */
 
 import { Outlet, useLocation } from "react-router-dom"
@@ -30,10 +30,13 @@ import Header from "./Header"
 import EULogo from "@/assets/eu_logo.png"
 import SHIFT2DCLogo from "@/assets/Horizontal_LogoSHIFT2DC_Color.png"
 import SwissLogo from "@/assets/WBF_SBFI_EU_Frameworkprogramme_E_RGB_pos_quer.jpg"
+import frontendPackage from "../../package.json"
 
 function Layout() {
   const location = useLocation()
   const isDevicesRoute = location.pathname.startsWith("/devices")
+  const releaseTag = `v${frontendPackage.version}`
+  const releaseUrl = `https://github.com/SHIFT2DC/EMS4DC/releases/tag/${releaseTag}`
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col" style={{ "--header-height": "4rem" }}>
@@ -45,32 +48,45 @@ function Layout() {
       </div>
       {!isDevicesRoute && (
         <footer className="bg-white border-t border-gray-200 py-6 px-8">
-          <div className="grid grid-cols-3 items-center gap-8 max-w-4xl mx-auto">
-            {/* Project Logo */}
-            <div className="flex justify-center items-center">
-              <img
-                src={SHIFT2DCLogo}
-                alt="SHIFT2DC Logo"
-                className="h-12 object-contain"
-              />
-            </div>
+          <div className="max-w-4xl mx-auto space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 items-center gap-8">
+              {/* Project Logo */}
+              <div className="flex justify-center items-center">
+                <img
+                  src={SHIFT2DCLogo}
+                  alt="SHIFT2DC Logo"
+                  className="h-12 object-contain"
+                />
+              </div>
 
-            {/* EU Logo */}
-            <div className="flex justify-center items-center">
-              <img
-                src={EULogo}
-                alt="EU Logo"
-                className="h-50 object-contain"
-              />
-            </div>
+              {/* EU Logo */}
+              <div className="flex justify-center items-center">
+                <img
+                  src={EULogo}
+                  alt="EU Logo"
+                  className="h-50 object-contain"
+                />
+              </div>
 
-            {/* Confederation Logo */}
-            <div className="flex justify-center items-center">
-              <img
-                src={SwissLogo}
-                alt="Swiss Confederation Logo"
-                className="h-50 object-contain"
-              />
+              {/* Confederation Logo */}
+              <div className="flex justify-center items-center">
+                <img
+                  src={SwissLogo}
+                  alt="Swiss Confederation Logo"
+                  className="h-50 object-contain"
+                />
+              </div>
+            </div>
+            <div className="text-center text-sm text-gray-600">
+              Version {" "}
+              <a
+                href={releaseUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="text-blue-700 hover:text-blue-900 underline underline-offset-2"
+              >
+                {releaseTag}
+              </a>
             </div>
           </div>
         </footer>

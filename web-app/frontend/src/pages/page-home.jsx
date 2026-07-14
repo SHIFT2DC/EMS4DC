@@ -19,10 +19,10 @@ limitations under the License.
 @Description: # TODO: Add desc
 
 @Created: 1st January 2025
-@Last Modified: 23 March 2026
+@Last Modified: 14 July 2026
 @Author: LeonGritsyuk-eaton
 
-@Version: v2.0.2
+@Version: v2.0.3
 */
 
 
@@ -107,6 +107,7 @@ function TopologyDiagramSkeleton() {
 function Home() {
   const navigate = useNavigate()
   const [devices, setDevices] = useState([])
+  const [installationName, setInstallationName] = useState("Building Overview")
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
   const [lastUpdate, setLastUpdate] = useState(null)
@@ -129,6 +130,9 @@ function Home() {
         asset_key: asset.asset_key
       }))
       setDevices(transformedDevices)
+      if (typeof data.installationName === "string" && data.installationName.trim()) {
+        setInstallationName(data.installationName.trim().slice(0, 40))
+      }
       setLastUpdate(new Date(data.timestamp))
     } catch (err) {
       console.error("Error loading devices:", err)
@@ -244,7 +248,7 @@ function Home() {
       {/* Header */}
       <div className="max-w-[1600px] mx-auto mb-4 flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Eaton European Innovation Center DC Microgrid</h1>
+          <h1 className="text-2xl font-bold text-gray-800">{installationName}</h1>
           {lastUpdate && (
             <p className="text-sm text-gray-500">
               Last updated: {lastUpdate.toLocaleTimeString()}

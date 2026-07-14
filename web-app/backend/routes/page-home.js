@@ -19,18 +19,56 @@ limitations under the License.
 @Description: # TODO: Add desc
 
 @Created: 24th November 2025
-@Last Modified: 01 March 2026
+@Last Modified: 14 July 2026
 @Author: LeonGritsyuk-eaton
 
-@Version: v2.0.2
+@Version: v2.0.3
 */
 
 
 import express from 'express';
 import { pool } from '../db/pool.js';
+import path from 'path';
+import { dirname } from 'path';
+import { fileURLToPath } from 'url';
+import { promises as fs } from 'fs';
 
 const router = express.Router();
 const MODBUS_API = process.env.MODBUS_API_URL ?? 'http://ems4dc-modbus-api:5050';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const configPath = path.join(__dirname, './../conf/config.json');
+const DEFAULT_INSTALLATION_NAME = 'Building Overview';
+const DEFAULT_OPERATION_MODE = 'droopMode';
+
+async function readSiteConfigSummary() {
+  try {
+    const configData = await fs.readFile(configPath, 'utf-8');
+    const parsedConfig = JSON.parse(configData);
+    const configuredName = parsedConfig?.generalSiteConfig?.installationName;
+    const selectedOperationMode = parsedConfig?.generalSiteConfig?.selectedOperationMode;
+
+    return {
+      installationName:
+        typeof configuredName === 'string' && configuredName.trim()
+          ? configuredName.trim().slice(0, 40)
+          : DEFAULT_INSTALLATION_NAME,
+      selectedOperationMode:
+        typeof selectedOperationMode === 'string' && selectedOperationMode.trim()
+          ? selectedOperationMode.trim()
+          : DEFAULT_OPERATION_MODE,
+    };
+  } catch (error) {
+    if (error.code !== 'ENOENT' && !(error instanceof SyntaxError)) {
+      console.error('Error reading installation name from config:', error);
+    }
+  }
+
+  return {
+    installationName: DEFAULT_INSTALLATION_NAME,
+    selectedOperationMode: DEFAULT_OPERATION_MODE,
+  };
+}
 
 /**
  * Fetch measurements for a single asset from the Modbus API service.
@@ -74,6 +112,8 @@ async function readDeviceMeasurements(asset) {
 // GET /api/home — Assets with current measurements
 router.get('/', async (req, res) => {
   try {
+    const { installationName } = await readSiteConfigSummary();
+
     const { rows: assets } = await pool.query(
       'SELECT * FROM assets WHERE is_active = true ORDER BY created_at ASC'
     );
@@ -82,10 +122,25 @@ router.get('/', async (req, res) => {
       assets.map(asset => readDeviceMeasurements(asset))
     );
 
-    res.json({ timestamp: new Date().toISOString(), assets: assetsWithMeasurements });
+    res.json({
+      timestamp: new Date().toISOString(),
+      installationName,
+      assets: assetsWithMeasurements
+    });
   } catch (error) {
     console.error('Error fetching home data:', error);
     res.status(500).json({ error: 'Failed to fetch site data' });
+  }
+});
+
+// GET /api/home/site-config — Lightweight general site config for navigation/UI gating
+router.get('/site-config', async (req, res) => {
+  try {
+    const siteConfigSummary = await readSiteConfigSummary();
+    res.json(siteConfigSummary);
+  } catch (error) {
+    console.error('Error fetching site config summary:', error);
+    res.status(500).json({ error: 'Failed to fetch site config summary' });
   }
 });
 

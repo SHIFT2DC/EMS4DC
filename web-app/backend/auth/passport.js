@@ -22,9 +22,8 @@ limitations under the License.
 @Last Modified: 01 March 2026
 @Author: Leon Gritsyuk
 
-@Version: v2.0.2
+@Version: v2.0.3
 */
-
 
 import passport from "passport";
 import { Strategy as LocalStrategy } from 'passport-local';

@@ -19,10 +19,10 @@ limitations under the License.
 @Description: # TODO: Add desc
 
 @Created: 1st January 2025
-@Last Modified: 20 March 2026
+@Last Modified: 14 July 2026
 @Author: LeonGritsyuk-eaton
 
-@Version: v2.0.2
+@Version: v2.0.3
 */
 
 import { useState, useEffect, useRef } from "react"
@@ -35,28 +35,56 @@ import {
 } from 'lucide-react'
 import DynamicDeviceNavigation from "./DeviceDynamicNavigation"
 import { useAuth } from "@/context/AuthContext"
+import api from "@/lib/axios"
 
 function Header() {
   const [isMenuOpen, setIsMenuOpen]       = useState(false)
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const [isNarrow, setIsNarrow]           = useState(window.innerWidth < 1300)
+  const [selectedOperationMode, setSelectedOperationMode] = useState(null)
   const menuRef     = useRef(null)
   const userMenuRef = useRef(null)
   const navigate    = useNavigate()
   const { user, logout } = useAuth()
 
   const isMaintainer = user?.role === 'maintainer'
+  const isDroopMode = selectedOperationMode === 'droopMode'
 
   const navItems = [
     { to: "/",             icon: Home,                  label: "Home" },
     { to: "/charts",       icon: ChartSpline,           label: "Charts" },
     { to: "/metrics",      icon: ChartArea,             label: "Metrics" },
     { to: "/emsdashboard", icon: ChartColumnIncreasing, label: "Optimization" },
-    { to: "/droopcurves",  icon: ChartNetwork,          label: "Droop" },
+    { to: "/droopcurves",  icon: ChartNetwork,          label: "Droop", droopOnly: true },
     { to: "/settings",     icon: Cog,                   label: "Settings",    maintainerOnly: true },
     { to: "https://shift2dc.github.io/docs.ems/", icon: BookA, label: "Docs" },
   ]
-  const visibleNavItems = navItems.filter(item => !item.maintainerOnly || isMaintainer)
+  const visibleNavItems = navItems.filter(item => {
+    if (item.maintainerOnly && !isMaintainer) return false
+    if (item.droopOnly && !isDroopMode) return false
+    return true
+  })
+
+  useEffect(() => {
+    const loadSiteConfigSummary = async () => {
+      try {
+        const { data } = await api.get('/api/home/site-config')
+        setSelectedOperationMode(data?.selectedOperationMode || null)
+      } catch (error) {
+        console.error('Error loading site config summary:', error)
+        setSelectedOperationMode(null)
+      }
+    }
+
+    loadSiteConfigSummary()
+
+    const handleSiteConfigUpdated = (event) => {
+      setSelectedOperationMode(event?.detail?.selectedOperationMode || null)
+    }
+
+    window.addEventListener('site-config-updated', handleSiteConfigUpdated)
+    return () => window.removeEventListener('site-config-updated', handleSiteConfigUpdated)
+  }, [])
 
   useEffect(() => {
     const handleResize = () => {

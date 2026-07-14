@@ -19,10 +19,10 @@ limitations under the License.
 @Description: # TODO: Add desc
 
 @Created: 1st February 2026
-@Last Modified: 22 April 2026
+@Last Modified: 14 July 2026
 @Author: LeonGritsyuk-eaton
 
-@Version: v2.0.2
+@Version: v2.0.3
 */
 
 
@@ -32,11 +32,16 @@ import path from 'path';
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { promises as fs } from 'fs';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const configPath = path.join(__dirname, './../conf/config.json');
 const modbusConfigPath = path.join(__dirname, './../conf/modbus.json');
+const INSTALLATION_NAME_MAX_LENGTH = 40;
+const RESTARTABLE_CONTAINERS = ['ems4dc-optimizer', 'ems4dc-measurements'];
+const execFileAsync = promisify(execFile);
 
 const router = express.Router();
 
@@ -613,6 +618,71 @@ async function removeFromModbusFile(assetKey) {
   }
 }
 
+async function syncAssetNameInFiles(assetKey, assetName) {
+  try {
+    // Sync name in config.json
+    try {
+      const configData = await fs.readFile(configPath, 'utf-8');
+      const trimmedConfigData = configData.trim();
+
+      if (trimmedConfigData) {
+        const config = JSON.parse(trimmedConfigData);
+        if (Array.isArray(config.devices)) {
+          config.devices = config.devices.map((device) =>
+            device.id === assetKey ? { ...device, name: assetName } : device
+          );
+          await fs.writeFile(configPath, JSON.stringify(config, null, 2));
+        }
+      }
+    } catch (error) {
+      if (error.code !== 'ENOENT' && !(error instanceof SyntaxError)) {
+        throw error;
+      }
+    }
+
+    // Sync name in modbus.json
+    try {
+      const modbusData = await fs.readFile(modbusConfigPath, 'utf-8');
+      const trimmedModbusData = modbusData.trim();
+
+      if (trimmedModbusData) {
+        const modbusConfig = JSON.parse(trimmedModbusData);
+        if (Array.isArray(modbusConfig.devices)) {
+          modbusConfig.devices = modbusConfig.devices.map((device) =>
+            device.assetKey === assetKey ? { ...device, name: assetName } : device
+          );
+          await fs.writeFile(modbusConfigPath, JSON.stringify(modbusConfig, null, 2));
+        }
+      }
+    } catch (error) {
+      if (error.code !== 'ENOENT' && !(error instanceof SyntaxError)) {
+        throw error;
+      }
+    }
+  } catch (error) {
+    console.error('Error syncing asset names in config files:', error);
+    throw error;
+  }
+}
+
+function normalizeConfigPayload(configPayload = {}) {
+  const normalizedConfig = {
+    ...configPayload,
+    generalSiteConfig: {
+      ...configPayload.generalSiteConfig
+    }
+  };
+
+  const rawInstallationName = normalizedConfig.generalSiteConfig.installationName;
+  if (typeof rawInstallationName === 'string') {
+    normalizedConfig.generalSiteConfig.installationName = rawInstallationName
+      .trim()
+      .slice(0, INSTALLATION_NAME_MAX_LENGTH);
+  }
+
+  return normalizedConfig;
+}
+
 // ==================== ASSETS CRUD ====================
 
 // Get all assets
@@ -719,6 +789,23 @@ router.put('/assets/:id', async (req, res) => {
     
     const { id } = req.params;
     const { name, type } = req.body;
+
+    if (type !== undefined) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Asset type cannot be changed after creation' });
+    }
+
+    const existingAssetResult = await client.query(
+      'SELECT asset_key, name FROM assets WHERE id = $1 AND is_active = true LIMIT 1',
+      [id]
+    );
+
+    if (existingAssetResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Asset not found' });
+    }
+
+    const existingAsset = existingAssetResult.rows[0];
     
     // Build update query dynamically
     const updates = [];
@@ -729,12 +816,8 @@ router.put('/assets/:id', async (req, res) => {
       updates.push(`name = $${paramCount++}`);
       values.push(name);
     }
-    if (type !== undefined) {
-      updates.push(`type = $${paramCount++}`);
-      values.push(type);
-    }
-    
     if (updates.length === 0) {
+      await client.query('ROLLBACK');
       return res.status(400).json({ error: 'No fields to update' });
     }
     
@@ -763,6 +846,15 @@ router.put('/assets/:id', async (req, res) => {
     await client.query(eventQuery, [id]);
     
     await client.query('COMMIT');
+
+    if (name !== undefined && name !== existingAsset.name) {
+      try {
+        await syncAssetNameInFiles(existingAsset.asset_key, name);
+      } catch (fileError) {
+        console.error('Warning: asset updated in DB but name sync in config files failed:', fileError);
+      }
+    }
+
     res.json(updatedAsset);
     
   } catch (error) {
@@ -883,7 +975,7 @@ router.get('/config', async (req, res) => {
 // Update config.json
 router.post('/config', async (req, res) => {
   try {
-    const newConfig = req.body;
+    const newConfig = normalizeConfigPayload(req.body);
     await fs.writeFile(configPath, JSON.stringify(newConfig, null, 2));
     res.json({ message: 'Configuration saved successfully' });
   } catch (error) {
@@ -921,11 +1013,47 @@ router.get('/modbus', async (req, res) => {
 router.post('/modbus', async (req, res) => {
   try {
     const newModbus = req.body;
-    await fs.writeFile(modbusConfigPath, JSON.stringify(newModbus, null, 2));
+
+    const assetNameMap = new Map();
+    const assetsResult = await pool.query('SELECT asset_key, name FROM assets WHERE is_active = true');
+    assetsResult.rows.forEach((asset) => assetNameMap.set(asset.asset_key, asset.name));
+
+    const normalizedModbus = {
+      ...newModbus,
+      devices: Array.isArray(newModbus?.devices)
+        ? newModbus.devices.map((device) => {
+            const syncedName = assetNameMap.get(device.assetKey);
+            return syncedName ? { ...device, name: syncedName } : device;
+          })
+        : []
+    };
+
+    await fs.writeFile(modbusConfigPath, JSON.stringify(normalizedModbus, null, 2));
     res.json({ message: 'Modbus configuration saved successfully' });
   } catch (error) {
     console.error('Error writing modbus configuration file:', error);
     res.status(500).json({ error: 'Error writing modbus configuration file' });
+  }
+});
+
+// Restart dependent EMS4DC sub-processes after restart-sensitive config updates
+router.post('/restart-processes', async (req, res) => {
+  try {
+    const { stdout, stderr } = await execFileAsync('docker', ['restart', ...RESTARTABLE_CONTAINERS]);
+
+    res.json({
+      message: 'Restart command executed successfully',
+      restarted: RESTARTABLE_CONTAINERS,
+      stdout: stdout?.trim() || '',
+      stderr: stderr?.trim() || '',
+    });
+  } catch (error) {
+    console.error('Error restarting dependent processes:', error);
+    res.status(500).json({
+      error: 'Failed to restart dependent processes',
+      details: error?.message || String(error),
+      expectedContainers: RESTARTABLE_CONTAINERS,
+    });
   }
 });
 

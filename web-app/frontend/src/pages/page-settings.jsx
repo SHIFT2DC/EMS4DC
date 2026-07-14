@@ -19,10 +19,10 @@ limitations under the License.
 @Description: # TODO: Add desc
 
 @Created: 1st February 2026
-@Last Modified: 23 March 2026
+@Last Modified: 14 July 2026
 @Author: LeonGritsyuk-eaton
 
-@Version: v2.0.2
+@Version: v2.0.3
 */
 
 
@@ -35,8 +35,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import {
-  Plus, Save, Trash2, RefreshCw, AlertCircle, Download, Settings, Database, CheckCircle, ChevronDown
+  Plus, Save, Trash2, RefreshCw, AlertCircle, Download, Settings, Database, CheckCircle, CircleHelp
 } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -58,8 +59,10 @@ export default function SettingsPage() {
   const [assets, setAssets] = useState([])
   const [globalConfig, setGlobalConfig] = useState(null)
   const [modbusConfig, setModbusConfig] = useState(null)
+  const [initialRestartSensitiveGeneralConfig, setInitialRestartSensitiveGeneralConfig] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [isGeneralRestartDialogOpen, setIsGeneralRestartDialogOpen] = useState(false)
   const [activeTab, setActiveTab] = useState("general")
 
   useEffect(() => {
@@ -82,6 +85,10 @@ export default function SettingsPage() {
       setAssets(assetsData)
       setGlobalConfig(configData)
       setModbusConfig(modbusData)
+      setInitialRestartSensitiveGeneralConfig({
+        selectedOperationMode: configData?.generalSiteConfig?.selectedOperationMode || "droopMode",
+        objectiveFunction: configData?.generalSiteConfig?.objectiveFunction || "maxSelfConsumption",
+      })
 
       toast({ title: "Settings loaded", description: "All settings have been loaded successfully." })
     } catch (error) {
@@ -117,9 +124,11 @@ export default function SettingsPage() {
       const { data: updatedAsset } = await api.put(`/api/settings/assets/${id}`, updates)
       setAssets(assets.map(a => a.id === id ? updatedAsset : a))
       toast({ title: "Asset updated", description: "Asset has been updated successfully." })
+      return updatedAsset
     } catch (error) {
       console.error("Error updating asset:", error)
       toast({ title: "Error", description: "Failed to update asset.", variant: "destructive" })
+      throw error
     }
   }
 
@@ -138,10 +147,21 @@ export default function SettingsPage() {
   const handleSaveGlobalConfig = async () => {
     try {
       await api.post('/api/settings/config', globalConfig)
+      window.dispatchEvent(new CustomEvent("site-config-updated", {
+        detail: {
+          selectedOperationMode: globalConfig?.generalSiteConfig?.selectedOperationMode || "droopMode"
+        }
+      }))
       toast({ title: "Configuration saved", description: "Global configuration has been saved successfully." })
+      setInitialRestartSensitiveGeneralConfig({
+        selectedOperationMode: globalConfig?.generalSiteConfig?.selectedOperationMode || "droopMode",
+        objectiveFunction: globalConfig?.generalSiteConfig?.objectiveFunction || "maxSelfConsumption",
+      })
+      return true
     } catch (error) {
       console.error("Error saving config:", error)
       toast({ title: "Error", description: "Failed to save configuration.", variant: "destructive" })
+      throw error
     }
   }
 
@@ -149,10 +169,52 @@ export default function SettingsPage() {
     try {
       await api.post('/api/settings/modbus', modbusConfig)
       toast({ title: "Modbus configuration saved", description: "Modbus configuration has been saved successfully." })
+      return true
     } catch (error) {
       console.error("Error saving modbus config:", error)
       toast({ title: "Error", description: "Failed to save modbus configuration.", variant: "destructive" })
+      throw error
     }
+  }
+
+  const handleRestartProcesses = async () => {
+    try {
+      await api.post('/api/settings/restart-processes')
+      toast({
+        title: "Processes restarted",
+        description: "py-optimizer and py-measurements were restarted successfully."
+      })
+      return true
+    } catch (error) {
+      console.error("Error restarting processes:", error)
+      toast({
+        title: "Restart failed",
+        description: error.response?.data?.error || "Failed to restart py-optimizer and py-measurements.",
+        variant: "destructive",
+      })
+      throw error
+    }
+  }
+
+  const isGeneralRestartRequired = () => {
+    if (!globalConfig || !initialRestartSensitiveGeneralConfig) return false
+
+    const selectedOperationMode = globalConfig?.generalSiteConfig?.selectedOperationMode || "droopMode"
+    const objectiveFunction = globalConfig?.generalSiteConfig?.objectiveFunction || "maxSelfConsumption"
+
+    return (
+      selectedOperationMode !== initialRestartSensitiveGeneralConfig.selectedOperationMode ||
+      objectiveFunction !== initialRestartSensitiveGeneralConfig.objectiveFunction
+    )
+  }
+
+  const handleGeneralSaveClick = async () => {
+    if (isGeneralRestartRequired()) {
+      setIsGeneralRestartDialogOpen(true)
+      return
+    }
+
+    await handleSaveGlobalConfig()
   }
 
   const handleExport = async () => {
@@ -215,29 +277,47 @@ export default function SettingsPage() {
       {/* Main Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="general">General Site Config</TabsTrigger>
-          <TabsTrigger value="assets">Assets</TabsTrigger>
-          <TabsTrigger value="events">Activity Log</TabsTrigger>
+          <TabsTrigger value="general" className="gap-2">
+            <span>General Settings</span>
+          </TabsTrigger>
+          <TabsTrigger value="assets" className="gap-2">
+            <span>Assets</span>
+          </TabsTrigger>
+          <TabsTrigger value="events" className="gap-2">
+            <span>Activity Log</span>
+          </TabsTrigger>
         </TabsList>
 
-        {/* General Site Config Tab */}
+        {/* General Settings Tab */}
         <TabsContent value="general" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>General Site Configuration</CardTitle>
+              <CardTitle>General Settings</CardTitle>
               <CardDescription>System-wide parameters and operation mode settings</CardDescription>
             </CardHeader>
             <CardContent>
               {globalConfig && <GeneralConfigEditor config={globalConfig} onChange={setGlobalConfig} />}
             </CardContent>
             <CardFooter>
-              <Button onClick={handleSaveGlobalConfig} className="w-full">
+              <Button onClick={handleGeneralSaveClick} className="w-full">
                 <Save className="h-4 w-4 mr-2" />
                 Save General Configuration
               </Button>
             </CardFooter>
           </Card>
         </TabsContent>
+
+        <RestartSaveDialog
+          open={isGeneralRestartDialogOpen}
+          onOpenChange={setIsGeneralRestartDialogOpen}
+          title="Restart Required"
+          description="Saving these general settings requires restarting EMS4DC sub-processes."
+          onConfirm={async () => {
+            await handleSaveGlobalConfig()
+            await handleRestartProcesses()
+            setIsGeneralRestartDialogOpen(false)
+          }}
+        />
 
         {/* Assets Tab */}
         <TabsContent value="assets" className="space-y-4">
@@ -268,6 +348,7 @@ export default function SettingsPage() {
                 onDelete={handleDeleteAsset}
                 onSaveConfig={handleSaveGlobalConfig}
                 onSaveModbus={handleSaveModbusConfig}
+                onRestartProcesses={handleRestartProcesses}
                 onConfigChange={setGlobalConfig}
                 onModbusChange={setModbusConfig}
               />
@@ -309,7 +390,10 @@ function GeneralConfigEditor({ config, onChange }) {
     <div className="space-y-6">
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="operationMode">Operation Mode</Label>
+          <div className="flex items-center gap-2">
+            <Label htmlFor="operationMode">Operation Mode</Label>
+            <FieldNote note="Select the active control strategy used by the EMS4DC." />
+          </div>
           <Select
             value={config.generalSiteConfig?.selectedOperationMode || "droopMode"}
             onValueChange={(value) => handleChange("selectedOperationMode", value)}
@@ -324,7 +408,10 @@ function GeneralConfigEditor({ config, onChange }) {
           </Select>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="objectiveFunction">Objective Function</Label>
+          <div className="flex items-center gap-2">
+            <Label htmlFor="objectiveFunction">Objective Function</Label>
+            <FieldNote note="Choose the optimization objective used when operation mode is optimizer-based." />
+          </div>
           <Select
             value={config.generalSiteConfig?.objectiveFunction || "maxSelfConsumption"}
             onValueChange={(value) => handleChange("objectiveFunction", value)}
@@ -343,19 +430,34 @@ function GeneralConfigEditor({ config, onChange }) {
             </SelectContent>
           </Select>
         </div>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Label htmlFor="installationName">Home Page Installation Name</Label>
+            <FieldNote note="Displayed as the title on the Home page. Maximum length is 40 characters." />
+          </div>
+          <Input
+            id="installationName"
+            value={config.generalSiteConfig?.installationName || ""}
+            maxLength={40}
+            placeholder="e.g., Building Overview"
+            onChange={(e) => handleChange("installationName", e.target.value.slice(0, 40))}
+          />
+          <p className="text-xs text-muted-foreground">
+            {(config.generalSiteConfig?.installationName || "").length}/40 characters
+          </p>
+        </div>
       </div>
     </div>
   )
 }
 
-function AssetsList({ assets, globalConfig, modbusConfig, onUpdate, onDelete, onSaveConfig, onSaveModbus, onConfigChange, onModbusChange }) {
+function AssetsList({ assets, globalConfig, modbusConfig, onUpdate, onDelete, onSaveConfig, onSaveModbus, onRestartProcesses, onConfigChange, onModbusChange }) {
   return (
     <div className="space-y-2">
       {assets.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
           <Database className="h-12 w-12 mx-auto mb-3 opacity-20" />
           <p>No assets configured. Click "Add Asset" to get started.</p>
-          <p className="text-sm mt-2">Asset keys will be auto-generated (e.g., pv1, bess1, load1)</p>
         </div>
       ) : (
         assets.map(asset => (
@@ -388,6 +490,7 @@ function AssetsList({ assets, globalConfig, modbusConfig, onUpdate, onDelete, on
                 onDelete={onDelete}
                 onSaveConfig={onSaveConfig}
                 onSaveModbus={onSaveModbus}
+                onRestartProcesses={onRestartProcesses}
                 onConfigChange={onConfigChange}
                 onModbusChange={onModbusChange}
               />
@@ -399,14 +502,17 @@ function AssetsList({ assets, globalConfig, modbusConfig, onUpdate, onDelete, on
   )
 }
 
-function AssetEditor({ asset, globalConfig, modbusConfig, onUpdate, onDelete, onSaveConfig, onSaveModbus, onConfigChange, onModbusChange }) {
+function AssetEditor({ asset, globalConfig, modbusConfig, onUpdate, onDelete, onSaveConfig, onSaveModbus, onRestartProcesses = async () => {}, onConfigChange, onModbusChange }) {
   const [localAsset, setLocalAsset] = useState(asset)
   const [hasChanges, setHasChanges] = useState(false)
-  const [expandedSection, setExpandedSection] = useState(null)
+  const [requiresRestartConfirmation, setRequiresRestartConfirmation] = useState(false)
+  const [isRestartDialogOpen, setIsRestartDialogOpen] = useState(false)
+  const [expandedSections, setExpandedSections] = useState([])
 
   useEffect(() => {
     setLocalAsset(asset)
     setHasChanges(false)
+    setRequiresRestartConfirmation(false)
   }, [asset])
 
   const handleFieldChange = (field, value) => {
@@ -414,9 +520,27 @@ function AssetEditor({ asset, globalConfig, modbusConfig, onUpdate, onDelete, on
     setHasChanges(true)
   }
 
-  const handleSave = () => {
-    onUpdate(asset.id, { name: localAsset.name, type: localAsset.type })
-    setHasChanges(false)
+  const executeSave = async () => {
+    try {
+      await Promise.all([
+        onUpdate(asset.id, { name: localAsset.name }),
+        onSaveConfig(),
+        onSaveModbus()
+      ])
+      setHasChanges(false)
+      setRequiresRestartConfirmation(false)
+    } catch (error) {
+      console.error("Error saving asset configuration:", error)
+    }
+  }
+
+  const handleSave = async () => {
+    if (requiresRestartConfirmation) {
+      setIsRestartDialogOpen(true)
+      return
+    }
+
+    await executeSave()
   }
 
   const deviceConfig = globalConfig?.devices?.find(d => d.id === asset.asset_key)
@@ -430,6 +554,8 @@ function AssetEditor({ asset, globalConfig, modbusConfig, onUpdate, onDelete, on
         : d
     )
     onConfigChange({ ...globalConfig, devices: updatedDevices })
+    setHasChanges(true)
+    setRequiresRestartConfirmation(true)
   }
 
   const handleModbusParamUpdate = (paramId, field, value) => {
@@ -447,6 +573,8 @@ function AssetEditor({ asset, globalConfig, modbusConfig, onUpdate, onDelete, on
         : d
     )
     onModbusChange({ ...modbusConfig, devices: updatedDevices })
+    setHasChanges(true)
+    setRequiresRestartConfirmation(true)
   }
 
   const handleModbusDeviceUpdate = (field, value) => {
@@ -457,6 +585,8 @@ function AssetEditor({ asset, globalConfig, modbusConfig, onUpdate, onDelete, on
         : d
     )
     onModbusChange({ ...modbusConfig, devices: updatedDevices })
+    setHasChanges(true)
+    setRequiresRestartConfirmation(true)
   }
 
   const handleAddModbusParameter = (mode = "read") => {
@@ -482,6 +612,8 @@ function AssetEditor({ asset, globalConfig, modbusConfig, onUpdate, onDelete, on
         : d
     )
     onModbusChange({ ...modbusConfig, devices: updatedDevices })
+    setHasChanges(true)
+    setRequiresRestartConfirmation(true)
   }
 
   const handleRemoveModbusParameter = (paramId) => {
@@ -492,42 +624,36 @@ function AssetEditor({ asset, globalConfig, modbusConfig, onUpdate, onDelete, on
         : d
     )
     onModbusChange({ ...modbusConfig, devices: updatedDevices })
+    setHasChanges(true)
+    setRequiresRestartConfirmation(true)
   }
 
   return (
     <div className="space-y-4">
       {/* Basic Info */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4">
         <div className="space-y-2">
-          <Label>Asset Name</Label>
+          <div className="flex items-center gap-2">
+            <Label>Asset Name</Label>
+            <FieldNote note="Human-readable asset label shown across UI pages." />
+          </div>
           <Input value={localAsset.name} onChange={(e) => handleFieldChange("name", e.target.value)} />
-        </div>
-        <div className="space-y-2">
-          <Label>Asset Type</Label>
-          <Select value={localAsset.type} onValueChange={(v) => handleFieldChange("type", v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {Object.entries(ASSET_TYPES).map(([key, { label, icon }]) => (
-                <SelectItem key={key} value={key}>
-                  <span className="flex items-center gap-2"><span>{icon}</span><span>{label}</span></span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </div>
       </div>
 
       {/* Configuration Sections */}
-      <Accordion type="single" collapsible value={expandedSection} onValueChange={setExpandedSection}>
+      <Accordion type="multiple" value={expandedSections} onValueChange={setExpandedSections}>
         <AccordionItem value="device-config">
-          <AccordionTrigger>Device Configuration Parameters</AccordionTrigger>
+          <AccordionTrigger>
+            <div className="inline-flex items-center gap-2">
+              <span>Device Configuration Parameters</span>
+              <FieldNote note="Electrical and operational limits used by the EMS for this asset." />
+            </div>
+          </AccordionTrigger>
           <AccordionContent>
             {deviceConfig ? (
               <div className="space-y-4 pt-2">
                 <DeviceConfigEditor parameters={deviceConfig.parameters} onChange={handleConfigUpdate} />
-                <Button onClick={onSaveConfig} size="sm" className="w-full">
-                  <Save className="h-4 w-4 mr-2" />Save Device Configuration
-                </Button>
               </div>
             ) : (
               <Alert>
@@ -539,7 +665,12 @@ function AssetEditor({ asset, globalConfig, modbusConfig, onUpdate, onDelete, on
         </AccordionItem>
 
         <AccordionItem value="modbus-config">
-          <AccordionTrigger>Modbus Communication Settings</AccordionTrigger>
+          <AccordionTrigger>
+            <div className="inline-flex items-center gap-2">
+              <span>Modbus Communication Settings</span>
+              <FieldNote note="Connection details and register map used for telemetry and controls." />
+            </div>
+          </AccordionTrigger>
           <AccordionContent>
             {modbusDevice ? (
               <div className="space-y-4 pt-2">
@@ -550,9 +681,6 @@ function AssetEditor({ asset, globalConfig, modbusConfig, onUpdate, onDelete, on
                   onAddParam={handleAddModbusParameter}
                   onRemoveParam={handleRemoveModbusParameter}
                 />
-                <Button onClick={onSaveModbus} size="sm" className="w-full">
-                  <Save className="h-4 w-4 mr-2" />Save Modbus Configuration
-                </Button>
               </div>
             ) : (
               <Alert>
@@ -568,10 +696,48 @@ function AssetEditor({ asset, globalConfig, modbusConfig, onUpdate, onDelete, on
       <div className="flex items-center justify-between pt-4 border-t">
         <DeleteAssetDialog asset={asset} onDelete={onDelete} />
         <Button onClick={handleSave} disabled={!hasChanges} size="sm">
-          <Save className="h-4 w-4 mr-2" />Save Asset Info
+          <Save className="h-4 w-4 mr-2" />Save Asset Config
         </Button>
       </div>
+
+      <RestartSaveDialog
+        open={isRestartDialogOpen}
+        onOpenChange={setIsRestartDialogOpen}
+        title="Restart Required"
+        description="Saving device or Modbus configuration requires restarting EMS4DC sub-processes."
+        onConfirm={async () => {
+          await executeSave()
+          await onRestartProcesses()
+          setIsRestartDialogOpen(false)
+        }}
+      />
     </div>
+  )
+}
+
+function RestartSaveDialog({ open, onOpenChange, title, description, onConfirm }) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription asChild>
+            <div className="space-y-3">
+              <p>{description}</p>
+              <p className="text-sm text-muted-foreground">Do you want to proceed?</p>
+            </div>
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button onClick={onConfirm}>
+            Proceed and Save
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -607,9 +773,12 @@ function DeviceConfigEditor({ parameters, onChange }) {
     <div className="grid grid-cols-2 gap-4">
       {Object.entries(parameters).map(([param, value]) => (
         <div key={param} className="space-y-2">
-          <Label htmlFor={`param-${param}`} className="text-sm">
-            {formatParameterName(param)}
-          </Label>
+          <div className="flex items-center gap-2">
+            <Label htmlFor={`param-${param}`} className="text-sm">
+              {formatParameterName(param)}
+            </Label>
+            <FieldNote note={`Set the value for ${formatParameterName(param)}.`} />
+          </div>
           <div className="flex items-center space-x-2">
             <Input
               id={`param-${param}`}
@@ -820,18 +989,20 @@ function ModbusDeviceEditor({ device, onDeviceUpdate, onParamUpdate, onAddParam,
   return (
     <div className="space-y-4">
       {/* Connection Settings */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1">
-          <Label className="text-xs">IP Address</Label>
+          <div className="flex items-center gap-2">
+            <Label className="text-xs">IP Address</Label>
+            <FieldNote note="Target Modbus TCP endpoint for this device." />
+          </div>
           <Input value={device.ipAddress} onChange={(e) => onDeviceUpdate("ipAddress", e.target.value)} placeholder="192.168.1.100" className="h-8" />
         </div>
         <div className="space-y-1">
-          <Label className="text-xs">Port</Label>
+          <div className="flex items-center gap-2">
+            <Label className="text-xs">Port</Label>
+            <FieldNote note="Modbus TCP port, usually 502." />
+          </div>
           <Input type="number" value={device.port} onChange={(e) => onDeviceUpdate("port", e.target.value)} placeholder="502" className="h-8" />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs">Device Name</Label>
-          <Input value={device.name} onChange={(e) => onDeviceUpdate("name", e.target.value)} placeholder="Device name" className="h-8" />
         </div>
       </div>
 
@@ -909,11 +1080,17 @@ function CreateAssetDialog({ onSubmit }) {
       </DialogHeader>
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label>Display Name *</Label>
+          <div className="flex items-center gap-2">
+            <Label>Display Name *</Label>
+            <FieldNote note="Name shown in UI. This name can be changed later." />
+          </div>
           <Input value={newAsset.name} onChange={(e) => setNewAsset({ ...newAsset, name: e.target.value })} placeholder="e.g., Solar PV 1" />
         </div>
         <div className="space-y-2">
-          <Label>Asset Type *</Label>
+          <div className="flex items-center gap-2">
+            <Label>Asset Type *</Label>
+            <FieldNote note="Defines template configuration and cannot be changed later." />
+          </div>
           <Select value={newAsset.type} onValueChange={(v) => setNewAsset({ ...newAsset, type: v })}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -925,13 +1102,6 @@ function CreateAssetDialog({ onSubmit }) {
             </SelectContent>
           </Select>
         </div>
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            <strong>Auto-configuration:</strong> Creating this asset will automatically add template
-            configurations to both config.json and modbus.json files.
-          </AlertDescription>
-        </Alert>
       </div>
       <DialogFooter>
         <Button onClick={handleSubmit}>
@@ -939,6 +1109,23 @@ function CreateAssetDialog({ onSubmit }) {
         </Button>
       </DialogFooter>
     </DialogContent>
+  )
+}
+
+function FieldNote({ note }) {
+  return (
+    <TooltipProvider delayDuration={150}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="inline-flex cursor-help text-muted-foreground hover:text-foreground" aria-label="Field note">
+            <CircleHelp className="h-3.5 w-3.5" />
+          </span>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-72 text-xs">
+          {note}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   )
 }
 

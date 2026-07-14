@@ -22,9 +22,8 @@ limitations under the License.
 @Last Modified: 16 February 2026
 @Author: LeonGritsyuk-eaton
 
-@Version: v2.0.2
+@Version: v2.0.3
 */
-
 
 import React from 'react';
 

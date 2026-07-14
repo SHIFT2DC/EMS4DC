@@ -22,9 +22,8 @@ limitations under the License.
 @Last Modified: 19 February 2026
 @Author: LeonGritsyuk-eaton
 
-@Version: v2.0.2
+@Version: v2.0.3
 */
-
 
 import pg from "pg";
 import dotenv from "dotenv";

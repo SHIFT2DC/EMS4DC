@@ -1,9 +1,8 @@
 {
-  "devices": [
-    
-  ],
+  "devices": [],
   "generalSiteConfig": {
     "selectedOperationMode": "droopMode",
-    "objectiveFunction": "maxWeightPowerFlow"
+    "objectiveFunction": "maxSelfConsumption",
+    "installationName": "Building Overview"
   }
 }

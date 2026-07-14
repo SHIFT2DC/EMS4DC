@@ -30,6 +30,11 @@ if "update_headers.py" in file_path.parts or "update_version.py" in file_path.pa
 if "node_modules" in file_path.parts:
     sys.exit(0)
 
+# Skip shadcn/ui components
+normalized = file_path.as_posix().lower()
+if "/web-app/frontend/src/components/ui/" in f"/{normalized}/":
+    sys.exit(0)
+
 comment_type, prefix = STYLE
 text = file_path.read_text(encoding="utf-8", errors="ignore")
 

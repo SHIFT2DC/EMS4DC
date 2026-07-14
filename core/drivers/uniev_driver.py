@@ -19,11 +19,10 @@ limitations under the License.
 @Description: TODO
 
 @Created: 19 March 2026
-@Last Modified: 10 February 2026
+@Last Modified: 14 July 2026
 @Author: Leon Gritsyuk
 
-@Version: v2.0.2
-
+@Version: v2.0.3
 '''
 
 import json
@@ -34,8 +33,8 @@ from typing import Dict, Any, Optional
 MODBUS_CONFIG_PATH = './../conf/modbus.json'
 DEVICE_CONFIG_PATH = './../conf/config.json'
 
-class PVDriver(BaseDeviceDriver):
-    """Driver for G2V Charger"""
+class UniEV(BaseDeviceDriver):
+    """Driver for V1G Charger"""
     
     def __init__(self, device_id: str, config: str):
         """Initialize the driver and load device configuration"""
