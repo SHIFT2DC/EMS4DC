@@ -19,7 +19,7 @@ limitations under the License.
 @Description: # TODO: Add desc
 
 @Created: 1st January 2025
-@Last Modified: 23 March 2026
+@Last Modified: 05 October 2026
 @Author: LeonGritsyuk-eaton
 
 @Version: v2.0.3
@@ -37,6 +37,7 @@ import Charts from './pages/page-charts'
 import DroopCurves from "./pages/page-droop-curves"
 import EMSDashboard from './pages/page-ems-dashboard'
 import EMSDebugPage from './pages/page-optimization-debug'
+import RawDataDebugPage from './pages/page-debug-raw-data'
 import SettingsPage from './pages/page-settings'
 import DeviceDynamicPage from './pages/page-device-dynamic'
 import MetricsDashboard from './pages/page-metrics'
@@ -67,6 +68,7 @@ export default function App() {
           <Route path="droopcurves"  element={<DroopCurves />} />
           <Route path="device/:assetKey" element={<DeviceDynamicPage />} />
           <Route path="debug/optimization" element={<EMSDebugPage />} />
+          <Route path="debug/raw-data" element={<ProtectedRoute role="maintainer"><RawDataDebugPage /></ProtectedRoute>} />
 
           <Route path="settings"   element={<ProtectedRoute role="maintainer"><SettingsPage /></ProtectedRoute>} />
           <Route path="users"      element={<ProtectedRoute role="maintainer"><PageUsers /></ProtectedRoute>} />
